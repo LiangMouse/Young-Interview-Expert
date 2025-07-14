@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation"
+import { redirect } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from 'next/headers'
 
 /**
  * 根路由：
@@ -14,7 +13,7 @@ export default async function Home() {
 
   const {
     data: { session },
-  } = await supabase.auth.getSession()
+  } = await supabase.auth.getSession();
 
-  redirect(session ? "/dashboard" : "/auth/login")
+  redirect(session ? "/dashboard" : "/auth/login");
 }
