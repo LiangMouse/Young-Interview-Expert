@@ -1,19 +1,15 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import { redirect } from "next/navigation"
-import DashboardClient from "./dashboard-client"
+import { getCurrentUser } from "@/lib/auth";
+import DashboardClient from "./dashboard-client";
+import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
-  let session = null
-  try {
-    const supabase = createClientComponentClient()
-    session = await supabase.auth.getSession().then((res) => res.data.session)
-  } catch {
-    /* ignore – 多数为未配置 env */
+  // 中间件已经处理了鉴权，这里只需要获取用户信息
+  const user = await getCurrentUser();
+
+  // 非空断言
+  if (!user) {
+    redirect("/auth/login");
   }
 
-  if (!session) {
-    redirect("/auth/login")
-  }
-
-  return <DashboardClient user={session.user} />
+  return <DashboardClient user={user} />;
 }

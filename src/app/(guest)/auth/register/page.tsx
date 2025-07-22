@@ -1,18 +1,24 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
+import { useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Checkbox } from "@/components/ui/checkbox"
-import { MessageCircle, Mail, Lock, Eye, EyeOff, User } from "lucide-react"
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { MessageCircle, Mail, Lock, Eye, EyeOff, User } from "lucide-react";
 
 export default function RegisterPage() {
   const supabase = createClientComponentClient();
@@ -21,37 +27,37 @@ export default function RegisterPage() {
     email: "",
     password: "",
     confirmPassword: "",
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [agreeTerms, setAgreeTerms] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
-  const router = useRouter()
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
-    })
-  }
+    });
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     if (formData.password !== formData.confirmPassword) {
-      setError("两次输入的密码不一致")
-      setLoading(false)
-      return
+      setError("两次输入的密码不一致");
+      setLoading(false);
+      return;
     }
 
     if (!agreeTerms) {
-      setError("请同意服务条款和隐私政策")
-      setLoading(false)
-      return
+      setError("请同意服务条款和隐私政策");
+      setLoading(false);
+      return;
     }
 
     try {
@@ -63,19 +69,19 @@ export default function RegisterPage() {
             name: formData.name,
           },
         },
-      })
+      });
 
       if (error) {
-        setError(error.message)
+        setError(error.message);
       } else {
-        setSuccess(true)
+        setSuccess(true);
       }
     } catch (error) {
-      setError("注册时发生错误，请稍后重试")
+      setError("注册时发生错误，请稍后重试");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleGoogleRegister = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -83,11 +89,11 @@ export default function RegisterPage() {
       options: {
         redirectTo: `${location.origin}/auth/callback`,
       },
-    })
+    });
     if (error) {
-      setError(error.message)
+      setError(error.message);
     }
-  }
+  };
 
   if (success) {
     return (
@@ -95,12 +101,24 @@ export default function RegisterPage() {
         <Card className="w-full max-w-md backdrop-blur-md bg-white/70 border-white/30 shadow-xl rounded-3xl">
           <CardContent className="text-center p-8">
             <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
             <h2 className="text-xl font-bold text-gray-800 mb-2">注册成功！</h2>
-            <p className="text-gray-600 mb-6">我们已向您的邮箱发送了验证链接，请查收邮件并点击链接完成账户激活。</p>
+            <p className="text-gray-600 mb-6">
+              我们已向您的邮箱发送了验证链接，请查收邮件并点击链接完成账户激活。
+            </p>
             <Button
               onClick={() => router.push("/auth/login")}
               className="w-full rounded-2xl bg-gradient-to-r from-sky-400 to-purple-400 hover:from-sky-500 hover:to-purple-500"
@@ -110,7 +128,7 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -130,7 +148,9 @@ export default function RegisterPage() {
         <Card className="backdrop-blur-md bg-white/70 border-white/30 shadow-xl rounded-3xl">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl text-gray-800">创建新账户</CardTitle>
-            <CardDescription className="text-gray-600">填写信息完成注册，或选择第三方登录</CardDescription>
+            <CardDescription className="text-gray-600">
+              填写信息完成注册，或选择第三方登录
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
@@ -142,7 +162,7 @@ export default function RegisterPage() {
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-gray-700">
-                  姓名
+                  用户名
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -152,7 +172,7 @@ export default function RegisterPage() {
                     type="text"
                     value={formData.name}
                     onChange={handleInputChange}
-                    placeholder="请输入您的姓名"
+                    placeholder="请输入您的用户名"
                     className="pl-10 rounded-2xl border-white/30 bg-white/50"
                     required
                   />
@@ -202,7 +222,11 @@ export default function RegisterPage() {
                     className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -220,7 +244,7 @@ export default function RegisterPage() {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     placeholder="请再次输入密码"
-                    className="pl-10 pr-10 rounded-2xl border-white/30 bg-white/50"
+                    className="pl-10 pr-10 rounded-2xl bordder-white/30 bg-white/50"
                     required
                   />
                   <Button
@@ -230,7 +254,11 @@ export default function RegisterPage() {
                     className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -243,12 +271,11 @@ export default function RegisterPage() {
                 />
                 <Label htmlFor="terms" className="text-sm text-gray-600">
                   我同意{" "}
-                  <Link href="/terms" className="text-sky-600 hover:text-sky-700">
-                    服务条款
-                  </Link>{" "}
-                  和{" "}
-                  <Link href="/privacy" className="text-sky-600 hover:text-sky-700">
-                    隐私政策
+                  <Link
+                    href="/terms"
+                    className="text-sky-600 hover:text-sky-700"
+                  >
+                    服务条款和 隐私政策
                   </Link>
                 </Label>
               </div>
@@ -265,7 +292,9 @@ export default function RegisterPage() {
             <div className="relative">
               <Separator className="my-6" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="bg-white px-4 text-sm text-gray-500">或者</span>
+                <span className="bg-white px-4 text-sm text-gray-500">
+                  或者
+                </span>
               </div>
             </div>
 
@@ -297,7 +326,10 @@ export default function RegisterPage() {
 
             <div className="text-center text-sm text-gray-600">
               已有账户？{" "}
-              <Link href="/auth/login" className="text-sky-600 hover:text-sky-700 font-medium transition-colors">
+              <Link
+                href="/auth/login"
+                className="text-sky-600 hover:text-sky-700 font-medium transition-colors"
+              >
                 立即登录
               </Link>
             </div>
@@ -305,5 +337,5 @@ export default function RegisterPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

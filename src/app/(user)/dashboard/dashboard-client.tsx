@@ -1,12 +1,18 @@
-"use client"
-import { useState } from "react"
-import type { User } from "@supabase/auth-helpers-nextjs"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+"use client";
+import { useState } from "react";
+import type { User } from "@supabase/auth-helpers-nextjs";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Play,
   BookOpen,
@@ -19,27 +25,28 @@ import {
   Settings,
   LogOut,
   ArrowRight,
-} from "lucide-react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
-import { useRouter } from "next/navigation"
+} from "lucide-react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useRouter } from "next/navigation";
 
 interface DashboardClientProps {
-  user: User
+  user: User;
 }
 
 export default function DashboardClient({ user }: DashboardClientProps) {
-  const [loading, setLoading] = useState(false)
-  const supabase = createClientComponentClient()
-  const router = useRouter()
+  const [loading, setLoading] = useState(false);
+  const supabase = createClientComponentClient();
+  const router = useRouter();
 
   const handleLogout = async () => {
-    setLoading(true)
-    await supabase.auth.signOut()
-    router.push("/auth/login")
-    router.refresh()
-  }
+    setLoading(true);
+    await supabase.auth.signOut();
+    router.push("/auth/login");
+    router.refresh();
+  };
 
-  const userName = user.user_metadata?.name || user.email?.split("@")[0] || "用户"
+  const userName =
+    user.user_metadata?.name || user.email?.split("@")[0] || "用户";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-purple-50 to-amber-50">
@@ -58,12 +65,22 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             <Button variant="ghost" size="sm" className="rounded-full">
               <Settings className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" className="rounded-full" onClick={handleLogout} disabled={loading}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-full"
+              onClick={handleLogout}
+              disabled={loading}
+            >
               <LogOut className="w-4 h-4" />
             </Button>
             <Avatar className="w-8 h-8">
-              <AvatarImage src={user.user_metadata?.avatar_url || "/placeholder.svg"} />
-              <AvatarFallback>{userName.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarImage
+                src={user.user_metadata?.avatar_url || "/placeholder.svg"}
+              />
+              <AvatarFallback>
+                {userName.charAt(0).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
           </div>
         </div>
@@ -72,8 +89,12 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       <div className="max-w-7xl mx-auto p-6">
         {/* 欢迎区域 */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">你好，{userName}！👋</h2>
-          <p className="text-gray-600">欢迎回到AI面试助手，继续你的面试练习之旅</p>
+          <h2 className="text-3xl font-bold text-gray-800 mb-2">
+            你好，{userName}！👋
+          </h2>
+          <p className="text-gray-600">
+            欢迎回到AI面试助手，继续你的面试练习之旅
+          </p>
         </div>
 
         {/* 快速操作卡片 */}
@@ -141,28 +162,36 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               <CardContent className="space-y-6">
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">基础面试技巧</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      基础面试技巧
+                    </span>
                     <span className="text-sm text-gray-600">85%</span>
                   </div>
                   <Progress value={85} className="h-2" />
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">行为面试问题</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      行为面试问题
+                    </span>
                     <span className="text-sm text-gray-600">72%</span>
                   </div>
                   <Progress value={72} className="h-2" />
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">技术面试准备</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      技术面试准备
+                    </span>
                     <span className="text-sm text-gray-600">58%</span>
                   </div>
                   <Progress value={58} className="h-2" />
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">沟通表达能力</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      沟通表达能力
+                    </span>
                     <span className="text-sm text-gray-600">91%</span>
                   </div>
                   <Progress value={91} className="h-2" />
@@ -216,19 +245,27 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="text-center p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl border border-yellow-200">
                     <div className="text-2xl mb-1">🏆</div>
-                    <p className="text-xs text-amber-700 font-medium">面试达人</p>
+                    <p className="text-xs text-amber-700 font-medium">
+                      面试达人
+                    </p>
                   </div>
                   <div className="text-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
                     <div className="text-2xl mb-1">⭐</div>
-                    <p className="text-xs text-green-700 font-medium">连续练习</p>
+                    <p className="text-xs text-green-700 font-medium">
+                      连续练习
+                    </p>
                   </div>
                   <div className="text-center p-3 bg-gradient-to-r from-blue-50 to-sky-50 rounded-2xl border border-blue-200">
                     <div className="text-2xl mb-1">🎯</div>
-                    <p className="text-xs text-blue-700 font-medium">精准回答</p>
+                    <p className="text-xs text-blue-700 font-medium">
+                      精准回答
+                    </p>
                   </div>
                   <div className="text-center p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-200">
                     <div className="text-2xl mb-1">💪</div>
-                    <p className="text-xs text-purple-700 font-medium">进步之星</p>
+                    <p className="text-xs text-purple-700 font-medium">
+                      进步之星
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -245,7 +282,11 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                 最近面试记录
               </CardTitle>
               <Link href="/history">
-                <Button variant="ghost" size="sm" className="text-sky-600 hover:text-sky-700">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-sky-600 hover:text-sky-700"
+                >
                   查看全部
                   <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
@@ -286,7 +327,9 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                       <MessageCircle className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-800">{record.type}</h4>
+                      <h4 className="font-medium text-gray-800">
+                        {record.type}
+                      </h4>
                       <p className="text-sm text-gray-600">
                         {record.date} · {record.duration}
                       </p>
@@ -303,7 +346,11 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                     >
                       {record.score}分
                     </Badge>
-                    <Button variant="ghost" size="sm" className="text-sky-600 hover:text-sky-700">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-sky-600 hover:text-sky-700"
+                    >
                       查看详情
                     </Button>
                   </div>
@@ -314,5 +361,5 @@ export default function DashboardClient({ user }: DashboardClientProps) {
         </Card>
       </div>
     </div>
-  )
+  );
 }

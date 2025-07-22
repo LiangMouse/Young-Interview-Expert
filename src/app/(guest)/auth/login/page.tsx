@@ -1,50 +1,55 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { MessageCircle, Mail, Lock, Eye, EyeOff, Github } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { MessageCircle, Mail, Lock, Eye, EyeOff, Github } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export default function LoginPage() {
   const supabase = createClientComponentClient();
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const router = useRouter()
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    setLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
-      })
+      });
 
       if (error) {
-        setError(error.message)
+        setError(error.message);
       } else {
-        router.push("/dashboard")
-        router.refresh()
+        router.push("/dashboard");
+        // router.refresh()
       }
     } catch (error) {
-      setError("登录时发生错误，请稍后重试")
+      setError("登录时发生错误，请稍后重试");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -52,11 +57,11 @@ export default function LoginPage() {
       options: {
         redirectTo: `${location.origin}/auth/callback`,
       },
-    })
+    });
     if (error) {
-      setError(error.message)
+      setError(error.message);
     }
-  }
+  };
 
   const handleGitHubLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -64,11 +69,11 @@ export default function LoginPage() {
       options: {
         redirectTo: `${location.origin}/auth/callback`,
       },
-    })
+    });
     if (error) {
-      setError(error.message)
+      setError(error.message);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-purple-50 to-amber-50 flex items-center justify-center p-4">
@@ -87,7 +92,9 @@ export default function LoginPage() {
         <Card className="backdrop-blur-md bg-white/70 border-white/30 shadow-xl rounded-3xl">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl text-gray-800">登录账户</CardTitle>
-            <CardDescription className="text-gray-600">使用邮箱/手机号登录或选择其他登录方式</CardDescription>
+            <CardDescription className="text-gray-600">
+              使用邮箱/手机号登录或选择其他登录方式
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
@@ -137,13 +144,20 @@ export default function LoginPage() {
                     className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               </div>
 
               <div className="flex items-center justify-between text-sm">
-                <Link href="/auth/forgot-password" className="text-sky-600 hover:text-sky-700 transition-colors">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sky-600 hover:text-sky-700 transition-colors"
+                >
                   忘记密码？
                 </Link>
               </div>
@@ -160,7 +174,9 @@ export default function LoginPage() {
             <div className="relative">
               <Separator className="my-6" />
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="bg-white px-4 text-sm text-gray-500">或者</span>
+                <span className="bg-white px-4 text-sm text-gray-500">
+                  或者
+                </span>
               </div>
             </div>
 
@@ -202,7 +218,10 @@ export default function LoginPage() {
 
             <div className="text-center text-sm text-gray-600">
               还没有账户？{" "}
-              <Link href="/auth/register" className="text-sky-600 hover:text-sky-700 font-medium transition-colors">
+              <Link
+                href="/auth/register"
+                className="text-sky-600 hover:text-sky-700 font-medium transition-colors"
+              >
                 立即注册
               </Link>
             </div>
@@ -221,5 +240,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

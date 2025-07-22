@@ -1,24 +1,14 @@
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
 import InterviewClient from "./interview-client";
+import { redirect } from "next/navigation";
 
 export default async function InterviewPage() {
-  const supabase = createClientComponentClient();
+  // 中间件已经处理了鉴权，这里只需要获取用户信息
+  const user = await getCurrentUser();
 
-  let session = null;
-  try {
-    const {
-      data: { session: sessionData },
-    } = await supabase.auth.getSession();
-    session = sessionData;
-  } catch (error) {
-    console.error("Error getting session:", error);
-    session = null;
-  }
-
-  if (!session) {
+  // 非空断言
+  if (!user) {
     redirect("/auth/login");
   }
-
-  return <InterviewClient user={session.user} />;
+  return <InterviewClient user={user} />;
 }
