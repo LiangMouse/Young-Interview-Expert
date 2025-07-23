@@ -118,4 +118,14 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* 防止页面自动滚动 */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* 确保页面内容正确显示 */
+  #__next {
+    min-height: 100vh;
+  }
 }
