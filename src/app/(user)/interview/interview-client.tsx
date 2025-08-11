@@ -1,9 +1,13 @@
 "use client";
 
 import type React from "react";
-
-import { useState, useRef, useEffect } from "react";
-import type { User } from "@supabase/auth-helpers-nextjs";
+import { InterviewClientProps } from "@/lib/types";
+import { useState, useRef, useEffect, memo } from "react";
+import { useDebounce } from "use-debounce";
+import { useMemoizedFn, useInterval } from "ahooks";
+import { useLocalStorage } from "react-use";
+import { motion, AnimatePresence } from "framer-motion";
+import { throttle } from "lodash";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,18 +32,9 @@ import {
   Star,
   ArrowLeft,
   Home,
+  Loader2,
 } from "lucide-react";
-import SpeechRecognition, {
-  useSpeechRecognition,
-} from "react-speech-recognition";
-
-interface Message {
-  id: string;
-  type: "user" | "ai";
-  content: string;
-  timestamp: Date;
-  emoji?: string;
-}
+import { useChat } from "@/hooks/useChat";
 
 interface VoiceWave {
   id: number;
@@ -47,32 +42,130 @@ interface VoiceWave {
   delay: number;
 }
 
-interface InterviewClientProps {
-  user: User;
+interface Message {
+  role: "user" | "assistant" | "system";
+  content: string;
 }
 
+// 优化的消息组件，使用 memo 和 framer-motion 动画
+const MessageItem = memo(
+  ({ message, index }: { message: Message; index: number }) => (
+    <motion.div
+      key={index}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{
+        duration: 0.3,
+        delay: index * 0.05,
+        ease: "easeOut",
+      }}
+      className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+    >
+      <motion.div
+        whileHover={{ scale: 1.02 }}
+        transition={{ duration: 0.2 }}
+        className={`max-w-[70%] p-4 rounded-3xl ${
+          message.role === "user"
+            ? "bg-gradient-to-r from-sky-400 to-purple-400 text-white"
+            : "bg-white/80 text-gray-800 border border-white/50"
+        }`}
+      >
+        <div className="flex items-start space-x-2">
+          {message.role === "assistant" && (
+            <motion.span
+              className="text-lg"
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+            >
+              🤖
+            </motion.span>
+          )}
+          <p className="text-sm leading-relaxed">{message.content}</p>
+        </div>
+        <p
+          className={`text-xs mt-2 ${message.role === "user" ? "text-white/70" : "text-gray-500"}`}
+        >
+          {new Date().toLocaleTimeString("zh-CN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </p>
+      </motion.div>
+    </motion.div>
+  ),
+);
+
+MessageItem.displayName = "MessageItem";
+
 export default function InterviewClient({ user }: InterviewClientProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      type: "ai",
-      content:
-        "你好！我是小智，你的AI面试助手 😊 很高兴认识你！我们可以开始一场轻松的模拟面试，帮你提升面试技巧。准备好了吗？",
-      timestamp: new Date(),
-      emoji: "👋",
-    },
-  ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  // 使用 react-use 的 useLocalStorage 持久化面板状态
+  const [isRightPanelOpen, setIsRightPanelOpen] = useLocalStorage(
+    "interview-right-panel-open",
+    true,
+  );
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [voiceWaves, setVoiceWaves] = useState<VoiceWave[]>([]);
-  const [isCommentExpanded, setIsCommentExpanded] = useState(false);
+  // 持久化评论展开状态
+  const [isCommentExpanded, setIsCommentExpanded] = useLocalStorage(
+    "interview-comment-expanded",
+    false,
+  );
+  const [interviewStartTime] = useState(new Date());
+  const [interactionCount, setInteractionCount] = useState(0);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // 使用 useChat hook
+  const { messages, isLoading, error, sendMessage, clearMessages } = useChat({
+    onFinish: () => {
+      setInteractionCount((prev) => prev + 1);
+    },
+    onError: (error) => {
+      console.error("聊天错误:", error);
+    },
+  });
+
+  // 使用 use-debounce 库优化滚动
+  const [messagesLength] = useDebounce(messages.length, 100);
+
+  // 使用 lodash throttle 和 ahooks useMemoizedFn 优化滚动函数
+  const scrollToBottom = useMemoizedFn(
+    throttle(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }, 200), // 200ms 节流
+  );
+
+  // 初始化欢迎消息
+  useEffect(() => {
+    if (messages.length === 0) {
+      const systemPrompt = `你是一位专业的AI面试官，名叫小智。你的任务是帮助求职者进行模拟面试练习。
+
+请遵循以下原则：
+1. 保持专业、友善、耐心的态度
+2. 根据用户的岗位需求提出相关的面试问题
+3. 对用户的回答给出建设性的反馈和建议
+4. 逐步深入，从基础问题到深度问题
+5. 适时给予鼓励和指导
+6. 用中文进行交流
+
+现在请向用户问好，并询问他们想要面试什么岗位。`;
+
+      sendMessage(systemPrompt, "system");
+    }
+  }, [messages.length, sendMessage]);
+
+  // 使用 ahooks 的 useInterval 优化时间更新
+  useInterval(() => {
+    setCurrentTime(new Date());
+  }, 1000);
+
+  // 不再需要手动清理定时器，use-debounce 会自动处理
 
   const userName =
     user.user_metadata?.name || user.email?.split("@")[0] || "用户";
@@ -87,45 +180,55 @@ export default function InterviewClient({ user }: InterviewClientProps) {
     setVoiceWaves(waves);
   }, []);
 
-  // 智能滚动处理 - 只在有新消息时滚动，避免初始消息导致的不必要滚动
+  // 智能滚动处理 - 使用防抖的消息长度
   useEffect(() => {
-    if (messages.length > 1) {
-      messagesEndRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "end",
-      });
+    if (messagesLength > 0) {
+      scrollToBottom();
     }
-  }, [messages]);
+  }, [messagesLength, scrollToBottom]);
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
+  // 计算面试进行时间
+  const getElapsedTime = () => {
+    const elapsed = Math.floor(
+      (currentTime.getTime() - interviewStartTime.getTime()) / 1000,
+    );
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  };
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      type: "user",
-      content: inputMessage,
-      timestamp: new Date(),
-    };
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
 
-    setMessages((prev) => [...prev, newMessage]);
+    const messageToSend = inputMessage;
     setInputMessage("");
 
-    // 模拟AI回复
+    try {
+      await sendMessage(messageToSend);
+    } catch (error) {
+      console.error("发送消息失败:", error);
+    }
+  };
+
+  const handleRestart = () => {
+    clearMessages();
+    setInteractionCount(0);
+    // 重新发送系统消息
     setTimeout(() => {
-      setIsAISpeaking(true);
-      setTimeout(() => {
-        const aiResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          type: "ai",
-          content:
-            "很好的问题！让我来为你详细分析一下。在面试中，这类问题通常是为了了解你的思维过程和解决问题的能力。你可以这样回答...",
-          timestamp: new Date(),
-          emoji: "🤔",
-        };
-        setMessages((prev) => [...prev, aiResponse]);
-        setIsAISpeaking(false);
-      }, 2000);
-    }, 500);
+      const systemPrompt = `你是一位专业的AI面试官，名叫小智。我们重新开始一场模拟面试。
+
+请遵循以下原则：
+1. 保持专业、友善、耐心的态度
+2. 根据用户的岗位需求提出相关的面试问题
+3. 对用户的回答给出建设性的反馈和建议
+4. 逐步深入，从基础问题到深度问题
+5. 适时给予鼓励和指导
+6. 用中文进行交流
+
+现在请向用户问好，并询问他们想要面试什么岗位。`;
+
+      sendMessage(systemPrompt, "system");
+    }, 100);
   };
   // 简历上传
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,7 +294,7 @@ export default function InterviewClient({ user }: InterviewClientProps) {
                       智
                     </AvatarFallback>
                   </Avatar>
-                  {isAISpeaking && (
+                  {isLoading && (
                     <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-green-400 rounded-full flex items-center justify-center animate-pulse">
                       <div className="w-2 h-2 bg-white rounded-full"></div>
                     </div>
@@ -202,21 +305,39 @@ export default function InterviewClient({ user }: InterviewClientProps) {
               </div>
 
               {/* 语音波纹动画 */}
-              {isAISpeaking && (
-                <div className="flex items-center justify-center space-x-1 mb-4">
-                  {voiceWaves.map((wave) => (
-                    <div
-                      key={wave.id}
-                      className="w-1 bg-gradient-to-t from-sky-400 to-purple-400 rounded-full animate-pulse"
-                      style={{
-                        height: `${wave.height}px`,
-                        animationDelay: `${wave.delay}s`,
-                        animationDuration: "1.5s",
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
+              <AnimatePresence>
+                {isLoading && (
+                  <motion.div
+                    key="voice-waves"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="flex items-center justify-center space-x-1 mb-4"
+                  >
+                    {voiceWaves.map((wave) => (
+                      <motion.div
+                        key={wave.id}
+                        className="w-1 bg-gradient-to-t from-sky-400 to-purple-400 rounded-full"
+                        animate={{
+                          height: [
+                            wave.height * 0.5,
+                            wave.height,
+                            wave.height * 0.5,
+                          ],
+                          opacity: [0.5, 1, 0.5],
+                        }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Infinity,
+                          delay: wave.delay,
+                          ease: "easeInOut",
+                        }}
+                        style={{ height: `${wave.height}px` }}
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* 状态指示 */}
               <div className="space-y-3">
@@ -232,35 +353,58 @@ export default function InterviewClient({ user }: InterviewClientProps) {
                 <div className="flex items-center justify-between p-3 bg-white/50 rounded-2xl">
                   <span className="text-sm text-gray-600">已进行时间</span>
                   <span className="text-sm font-medium text-gray-800">
-                    05:23
+                    {getElapsedTime()}
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-white/50 rounded-2xl">
                   <span className="text-sm text-gray-600">互动次数</span>
                   <span className="text-sm font-medium text-gray-800">
-                    12次
+                    {interactionCount}次
                   </span>
                 </div>
               </div>
 
               {/* 控制按钮 */}
               <div className="flex space-x-2 mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 rounded-2xl border-sky-200 hover:bg-sky-50 bg-transparent"
+                <motion.div
+                  className="flex-1"
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.02 }}
                 >
-                  <RotateCcw className="w-4 h-4 mr-1" />
-                  重新开始
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 rounded-2xl border-purple-200 hover:bg-purple-50 bg-transparent"
+                  <Button
+                    onClick={handleRestart}
+                    variant="outline"
+                    size="sm"
+                    className="w-full rounded-2xl border-sky-200 hover:bg-sky-50 bg-transparent"
+                    disabled={isLoading}
+                  >
+                    <motion.div
+                      animate={isLoading ? { rotate: 360 } : { rotate: 0 }}
+                      transition={{
+                        duration: 1,
+                        repeat: isLoading ? Infinity : 0,
+                      }}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-1" />
+                    </motion.div>
+                    重新开始
+                  </Button>
+                </motion.div>
+                <motion.div
+                  className="flex-1"
+                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.02 }}
                 >
-                  <Pause className="w-4 h-4 mr-1" />
-                  暂停
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full rounded-2xl border-purple-200 hover:bg-purple-50 bg-transparent"
+                    disabled={isLoading}
+                  >
+                    <Pause className="w-4 h-4 mr-1" />
+                    暂停
+                  </Button>
+                </motion.div>
               </div>
             </CardContent>
           </Card>
@@ -290,37 +434,68 @@ export default function InterviewClient({ user }: InterviewClientProps) {
             <CardContent className="flex-1 flex flex-col p-0">
               <ScrollArea className="flex-1 px-6">
                 <div className="space-y-4 pb-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[70%] p-4 rounded-3xl ${
-                          message.type === "user"
-                            ? "bg-gradient-to-r from-sky-400 to-purple-400 text-white"
-                            : "bg-white/80 text-gray-800 border border-white/50"
-                        }`}
+                  <AnimatePresence mode="popLayout">
+                    {messages.map((message, index) => (
+                      <MessageItem
+                        key={index}
+                        message={message}
+                        index={index}
+                      />
+                    ))}
+
+                    {/* 加载状态 */}
+                    {isLoading && (
+                      <motion.div
+                        key="loading"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="flex justify-start"
                       >
-                        <div className="flex items-start space-x-2">
-                          {message.emoji && message.type === "ai" && (
-                            <span className="text-lg">{message.emoji}</span>
-                          )}
-                          <p className="text-sm leading-relaxed">
-                            {message.content}
-                          </p>
+                        <div className="max-w-[70%] p-4 rounded-3xl bg-white/80 text-gray-800 border border-white/50">
+                          <div className="flex items-center space-x-2">
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{
+                                duration: 1,
+                                repeat: Infinity,
+                                ease: "linear",
+                              }}
+                            >
+                              <Loader2 className="w-4 h-4" />
+                            </motion.div>
+                            <span className="text-sm">AI正在思考中...</span>
+                          </div>
                         </div>
-                        <p
-                          className={`text-xs mt-2 ${message.type === "user" ? "text-white/70" : "text-gray-500"}`}
-                        >
-                          {message.timestamp.toLocaleTimeString("zh-CN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                      </motion.div>
+                    )}
+
+                    {/* 错误状态 */}
+                    {error && (
+                      <motion.div
+                        key="error"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="flex justify-center"
+                      >
+                        <div className="max-w-[70%] p-4 rounded-3xl bg-red-50 text-red-600 border border-red-200">
+                          <p className="text-sm">发送失败: {error}</p>
+                          <motion.div whileTap={{ scale: 0.95 }}>
+                            <Button
+                              onClick={() => handleSendMessage()}
+                              size="sm"
+                              variant="outline"
+                              className="mt-2"
+                            >
+                              重试
+                            </Button>
+                          </motion.div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
@@ -328,39 +503,96 @@ export default function InterviewClient({ user }: InterviewClientProps) {
               {/* 输入区域 */}
               <div className="p-6 border-t border-white/20">
                 <div className="flex items-center space-x-3">
-                  <div className="flex-1 relative">
+                  <motion.div
+                    className="flex-1 relative"
+                    whileFocus={{ scale: 1.01 }}
+                  >
                     <Input
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
-                      placeholder="输入你的问题或回答..."
+                      placeholder={
+                        isLoading ? "AI正在回复中..." : "输入你的问题或回答..."
+                      }
                       className="pr-12 rounded-2xl border-white/30 bg-white/50 backdrop-blur-sm"
                       onKeyDown={(e) =>
-                        e.key === "Enter" && handleSendMessage()
+                        e.key === "Enter" && !e.shiftKey && handleSendMessage()
                       }
+                      disabled={isLoading}
                     />
-                    <Button
-                      onClick={handleSendMessage}
-                      size="sm"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-gradient-to-r from-sky-400 to-purple-400 hover:from-sky-500 hover:to-purple-500"
+                    <motion.div
+                      whileTap={{ scale: 0.9 }}
+                      whileHover={{ scale: 1.1 }}
                     >
-                      <Send className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <Button
-                    onClick={toggleRecording}
-                    variant={isRecording ? "destructive" : "outline"}
-                    size="lg"
-                    className="rounded-2xl"
+                      <Button
+                        onClick={handleSendMessage}
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-gradient-to-r from-sky-400 to-purple-400 hover:from-sky-500 hover:to-purple-500"
+                        disabled={isLoading || !inputMessage.trim()}
+                      >
+                        {isLoading ? (
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{
+                              duration: 1,
+                              repeat: Infinity,
+                              ease: "linear",
+                            }}
+                          >
+                            <Loader2 className="w-4 h-4" />
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            whileHover={{ x: 2 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <Send className="w-4 h-4" />
+                          </motion.div>
+                        )}
+                      </Button>
+                    </motion.div>
+                  </motion.div>
+                  <motion.div
+                    whileTap={{ scale: 0.9 }}
+                    whileHover={{ scale: 1.05 }}
+                    animate={
+                      isRecording ? { scale: [1, 1.1, 1] } : { scale: 1 }
+                    }
+                    transition={{
+                      duration: 0.5,
+                      repeat: isRecording ? Infinity : 0,
+                    }}
                   >
-                    {isRecording ? (
-                      <MicOff className="w-5 h-5" />
-                    ) : (
-                      <Mic className="w-5 h-5" />
-                    )}
-                  </Button>
+                    <Button
+                      onClick={toggleRecording}
+                      variant={isRecording ? "destructive" : "outline"}
+                      size="lg"
+                      className="rounded-2xl"
+                      disabled={isLoading}
+                    >
+                      <motion.div
+                        animate={
+                          isRecording
+                            ? { rotate: [0, 10, -10, 0] }
+                            : { rotate: 0 }
+                        }
+                        transition={{
+                          duration: 0.5,
+                          repeat: isRecording ? Infinity : 0,
+                        }}
+                      >
+                        {isRecording ? (
+                          <MicOff className="w-5 h-5" />
+                        ) : (
+                          <Mic className="w-5 h-5" />
+                        )}
+                      </motion.div>
+                    </Button>
+                  </motion.div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2 text-center">
-                  支持语音输入 · 按住说话 · 松开发送
+                  {isLoading
+                    ? "AI正在思考，请稍候..."
+                    : "支持语音输入 · 按住说话 · 松开发送"}
                 </p>
               </div>
             </CardContent>
@@ -467,6 +699,7 @@ export default function InterviewClient({ user }: InterviewClientProps) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
+                    {/* <span>&emsp;</span>  */}
                     <div
                       className={`space-y-3 transition-all duration-300 overflow-hidden ${
                         isCommentExpanded ? "max-h-none" : "max-h-32"

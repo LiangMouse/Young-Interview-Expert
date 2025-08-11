@@ -11,13 +11,6 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.svg", // favicon.ico
     shortcut: "/favicon-16x16.png", // favicon-16x16.png
-
-    // TODO
-    // apple: '/apple-touch-icon.png', // apple-touch-icon.png
-    // other: {
-    //   rel: 'apple-touch-icon-precomposed',
-    //   url: '/apple-touch-icon-precomposed.png',
-    // },
   },
 };
 
