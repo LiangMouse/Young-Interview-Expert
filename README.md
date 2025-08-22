@@ -24,6 +24,40 @@
 - **Vercel**：部署
 - **CodeMirror**：代码编辑器
 
----
+## 开发指南 🔧
 
-如有建议或想法，欢迎 Issue
+### 快速开始
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/your-username/Young-Interview-Expert.git
+cd Young-Interview-Expert
+
+# 2. 安装依赖
+pnpm install
+
+# 3. 配置环境变量
+cp .env.example .env.local
+# 编辑 .env.local，填入你的 Supabase 配置等环境变量
+
+# 4. 设置数据库
+
+
+# 5. 启动开发服务器
+pnpm start
+```
+
+### 环境要求
+
+- Node.js >= 18.17.0
+- pnpm (推荐) 或 npm
+
+### 主要脚本
+
+```bash
+pnpm dev        # 开发服务器
+pnpm build      # 构建生产版本
+pnpm lint       # 代码检查
+pnpm format     # 代码格式化
+```
+
