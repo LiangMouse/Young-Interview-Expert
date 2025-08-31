@@ -24,7 +24,7 @@ import {
   Save,
   X,
   Upload,
-  User,
+  User as UserIcon,
   Mail,
   Briefcase,
   Target,
@@ -58,7 +58,8 @@ export default function ProfileClient({ user }: ProfileClientProps) {
   });
 
   const supabase = createClientComponentClient();
-  const userName = user.user_metadata?.name || user.email?.split("@")[0] || "用户";
+  const userName =
+    user.user_metadata?.name || user.email?.split("@")[0] || "用户";
 
   // 获取用户资料
   const fetchUserProfile = async () => {
@@ -117,7 +118,10 @@ export default function ProfileClient({ user }: ProfileClientProps) {
         location: formData.location,
         job_title: formData.job_title,
         job_intention: formData.job_intention,
-        skills: formData.skills.split(",").map(skill => skill.trim()).filter(Boolean),
+        skills: formData.skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean),
         experience_years: formData.experience_years,
         education: formData.education,
       };
@@ -146,9 +150,11 @@ export default function ProfileClient({ user }: ProfileClientProps) {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: name === "experience_years" ? parseInt(value) || 0 : value,
     }));
@@ -283,7 +289,7 @@ export default function ProfileClient({ user }: ProfileClientProps) {
           <Card className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5" />
+                <UserIcon className="w-5 h-5" />
                 基本信息
               </CardTitle>
             </CardHeader>
@@ -301,7 +307,9 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                     placeholder="请输入当前职位"
                   />
                 ) : (
-                  <p className="text-gray-700">{formData.job_title || "暂未填写"}</p>
+                  <p className="text-gray-700">
+                    {formData.job_title || "暂未填写"}
+                  </p>
                 )}
               </div>
 
@@ -318,7 +326,9 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                     placeholder="请输入所在地区"
                   />
                 ) : (
-                  <p className="text-gray-700">{formData.location || "暂未填写"}</p>
+                  <p className="text-gray-700">
+                    {formData.location || "暂未填写"}
+                  </p>
                 )}
               </div>
 
@@ -335,7 +345,9 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                     placeholder="请输入联系电话"
                   />
                 ) : (
-                  <p className="text-gray-700">{formData.phone || "暂未填写"}</p>
+                  <p className="text-gray-700">
+                    {formData.phone || "暂未填写"}
+                  </p>
                 )}
               </div>
 
@@ -355,7 +367,9 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                   />
                 ) : (
                   <p className="text-gray-700">
-                    {formData.experience_years > 0 ? `${formData.experience_years} 年` : "暂未填写"}
+                    {formData.experience_years > 0
+                      ? `${formData.experience_years} 年`
+                      : "暂未填写"}
                   </p>
                 )}
               </div>
@@ -384,7 +398,9 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                     placeholder="请输入求职意向"
                   />
                 ) : (
-                  <p className="text-gray-700">{formData.job_intention || "暂未填写"}</p>
+                  <p className="text-gray-700">
+                    {formData.job_intention || "暂未填写"}
+                  </p>
                 )}
               </div>
 
@@ -399,11 +415,18 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                   />
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {formData.skills.split(",").filter(Boolean).map((skill, index) => (
-                      <Badge key={index} variant="secondary" className="rounded-full">
-                        {skill.trim()}
-                      </Badge>
-                    ))}
+                    {formData.skills
+                      .split(",")
+                      .filter(Boolean)
+                      .map((skill, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="rounded-full"
+                        >
+                          {skill.trim()}
+                        </Badge>
+                      ))}
                     {!formData.skills && (
                       <p className="text-gray-500">暂未添加技能标签</p>
                     )}
@@ -424,7 +447,9 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                     placeholder="请输入教育背景"
                   />
                 ) : (
-                  <p className="text-gray-700">{formData.education || "暂未填写"}</p>
+                  <p className="text-gray-700">
+                    {formData.education || "暂未填写"}
+                  </p>
                 )}
               </div>
             </CardContent>
@@ -471,7 +496,9 @@ export default function ProfileClient({ user }: ProfileClientProps) {
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-sky-400 transition-colors">
               <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 mb-2">点击上传或拖拽文件到此处</p>
-              <p className="text-sm text-gray-500">支持 PDF、DOC、DOCX 格式，最大 10MB</p>
+              <p className="text-sm text-gray-500">
+                支持 PDF、DOC、DOCX 格式，最大 10MB
+              </p>
               <Button className="mt-4 bg-gradient-to-r from-sky-400 to-purple-400 hover:from-sky-500 hover:to-purple-500 rounded-full">
                 选择文件
               </Button>

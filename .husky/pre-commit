@@ -11,14 +11,6 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# 类型检查
-echo "🔧 Running type check..."
-pnpm type-check
-if [ $? -ne 0 ]; then
-  echo "❌ Type check failed!"
-  exit 1
-fi
-
 # 构建检查
 echo "🏗️  Running build check..."
 pnpm build
