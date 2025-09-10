@@ -17,9 +17,7 @@ import {
   Play,
   BookOpen,
   TrendingUp,
-  Calendar,
   Award,
-  Target,
   Clock,
   MessageCircle,
   Settings,
@@ -58,7 +56,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-sky-600 to-purple-600 bg-clip-text text-transparent">
-              AI智能面试助手
+              AI面试官 - 小面
             </h1>
           </div>
           <div className="flex items-center space-x-3">
@@ -146,131 +144,6 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               </CardContent>
             </Card>
           </Link>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* 学习进度 */}
-          <div className="lg:col-span-2">
-            <Card className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl">
-              <CardHeader>
-                <CardTitle className="flex items-center text-gray-800">
-                  <Target className="w-5 h-5 mr-2" />
-                  学习进度
-                </CardTitle>
-                <CardDescription>你的面试技能提升情况</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      基础面试技巧
-                    </span>
-                    <span className="text-sm text-gray-600">85%</span>
-                  </div>
-                  <Progress value={85} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      行为面试问题
-                    </span>
-                    <span className="text-sm text-gray-600">72%</span>
-                  </div>
-                  <Progress value={72} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      技术面试准备
-                    </span>
-                    <span className="text-sm text-gray-600">58%</span>
-                  </div>
-                  <Progress value={58} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      沟通表达能力
-                    </span>
-                    <span className="text-sm text-gray-600">91%</span>
-                  </div>
-                  <Progress value={91} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 统计信息 */}
-          <div className="space-y-6">
-            <Card className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl">
-              <CardHeader>
-                <CardTitle className="flex items-center text-gray-800">
-                  <Calendar className="w-5 h-5 mr-2" />
-                  本周统计
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-sky-500" />
-                    <span className="text-sm text-gray-600">练习时长</span>
-                  </div>
-                  <span className="font-semibold text-gray-800">2小时15分</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <MessageCircle className="w-4 h-4 text-purple-500" />
-                    <span className="text-sm text-gray-600">面试次数</span>
-                  </div>
-                  <span className="font-semibold text-gray-800">8次</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-gray-600">平均得分</span>
-                  </div>
-                  <span className="font-semibold text-gray-800">82分</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl">
-              <CardHeader>
-                <CardTitle className="flex items-center text-gray-800">
-                  <Award className="w-5 h-5 mr-2" />
-                  成就徽章
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="text-center p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl border border-yellow-200">
-                    <div className="text-2xl mb-1">🏆</div>
-                    <p className="text-xs text-amber-700 font-medium">
-                      面试达人
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200">
-                    <div className="text-2xl mb-1">⭐</div>
-                    <p className="text-xs text-green-700 font-medium">
-                      连续练习
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-gradient-to-r from-blue-50 to-sky-50 rounded-2xl border border-blue-200">
-                    <div className="text-2xl mb-1">🎯</div>
-                    <p className="text-xs text-blue-700 font-medium">
-                      精准回答
-                    </p>
-                  </div>
-                  <div className="text-center p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-200">
-                    <div className="text-2xl mb-1">💪</div>
-                    <p className="text-xs text-purple-700 font-medium">
-                      进步之星
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
 
         {/* 最近面试记录 */}

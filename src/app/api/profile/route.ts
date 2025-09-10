@@ -2,6 +2,22 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
+interface ProfileData {
+  user_id: string;
+  full_name: string;
+  bio: string;
+  phone: string;
+  location: string;
+  job_title: string;
+  job_intention: string;
+  skills: string[];
+  experience_years: number;
+  education: string;
+  avatar_url: string;
+  updated_at: string;
+  created_at?: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
@@ -50,7 +66,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // 准备用户资料数据
-    const profileData = {
+    const profileData: ProfileData = {
       user_id: session.user.id,
       full_name: body.full_name || "",
       bio: body.bio || "",

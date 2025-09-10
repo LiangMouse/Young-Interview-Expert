@@ -84,7 +84,7 @@ export default function LoginPage() {
             <MessageCircle className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold bg-gradient-to-r from-sky-600 to-purple-600 bg-clip-text text-transparent">
-            AI智能面试助手
+            小面
           </h1>
           <p className="text-gray-600 mt-2">欢迎回来，开始你的面试练习之旅</p>
         </div>
