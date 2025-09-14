@@ -16,4 +16,5 @@ export interface VoiceWave {
 
 export interface InterviewClientProps {
   user: User;
+  interview: any;
 }

@@ -2,12 +2,8 @@
 
 import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
-import { createStructuredOutputRunnable } from "langchain/chains/openai_functions";
-import {
-  ChatPromptTemplate,
-  HumanMessagePromptTemplate,
-  SystemMessagePromptTemplate,
-} from "@langchain/core/prompts";
+import { JsonOutputParser } from "@langchain/core/output_parsers";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
 
 const zodSchema = z.object({
   full_name: z.string().optional().describe("Full name"),
@@ -73,25 +69,33 @@ export async function analyzeResume(
 > {
   try {
     const model = new ChatOpenAI({
-      modelName: "gpt-4-turbo",
+      modelName: "deepseek-chat",
       temperature: 0,
+      apiKey: process.env.DEEPSEEK_V3_API,
+      configuration: {
+        baseURL: "https://api.deepseek.com/v1",
+      },
     });
 
-    const prompt = ChatPromptTemplate.fromMessages([
-      SystemMessagePromptTemplate.fromTemplate(
-        "Extracts structured data from the resume text.",
-      ),
-      HumanMessagePromptTemplate.fromTemplate("{text}"),
-    ]);
+    const parser = new JsonOutputParser<ResumeData>();
 
-    const chain = createStructuredOutputRunnable({
-      outputSchema: zodSchema,
-      llm: model,
-      prompt,
-    });
+    const prompt = ChatPromptTemplate.fromTemplate(
+      `You are an AI assistant that analyzes a resume and extracts key information.
+      Please format your output as a JSON object that strictly follows the provided JSON schema.
+      Do not include any other text or explanations in your response, only the JSON object.
+      
+      JSON Schema:
+      {format_instructions}
+      
+      Resume Text:
+      {text}`,
+    );
+
+    const chain = prompt.pipe(model).pipe(parser);
 
     const result = await chain.invoke({
-      text: `Please analyze the following resume text and extract the relevant information in a structured format. Make sure to follow the provided schema precisely. Resume text: ${text}`,
+      text: text,
+      format_instructions: parser.getFormatInstructions(),
     });
 
     return {

@@ -20,6 +20,7 @@ interface UseChatReturn {
   clearMessages: () => void;
 }
 
+// 聊天核心交互LLM Hook
 export function useChat(options: UseChatOptions = {}) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);

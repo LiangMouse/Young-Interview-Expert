@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// deepseekv3 api
 export async function POST(request: NextRequest) {
   try {
     const { messages, model = "deepseek-chat" } = await request.json();

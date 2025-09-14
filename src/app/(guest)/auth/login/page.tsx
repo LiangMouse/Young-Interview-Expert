@@ -18,9 +18,12 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { MessageCircle, Mail, Lock, Eye, EyeOff, Github } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useUserStore } from "@/store/user";
+import { getOrCreateUserProfile } from "@/action/user-profile";
 
 export default function LoginPage() {
   const supabase = createClientComponentClient();
+  const { setUserInfo } = useUserStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,16 +36,20 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
         setError(error.message);
-      } else {
+      } else if (data.user) {
+        const userProfile = await getOrCreateUserProfile(data.user);
+        if (userProfile) {
+          console.log("zustang赋值前", userProfile);
+          setUserInfo(userProfile);
+        }
         router.push("/dashboard");
-        // router.refresh()
       }
     } catch (error) {
       setError("登录时发生错误，请稍后重试");

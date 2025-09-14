@@ -140,7 +140,7 @@ export default function InterviewClient({ user }: InterviewClientProps) {
       });
     }, 200), // 200ms 节流
   );
-
+  // TODO 待修复
   // 初始化欢迎消息
   useEffect(() => {
     if (messages.length === 0) {
@@ -169,17 +169,6 @@ export default function InterviewClient({ user }: InterviewClientProps) {
 
   const userName =
     user.user_metadata?.name || user.email?.split("@")[0] || "用户";
-
-  // 生成语音波纹动画数据
-  useEffect(() => {
-    const waves = Array.from({ length: 12 }, (_, i) => ({
-      id: i,
-      height: Math.random() * 40 + 10,
-      delay: i * 0.1,
-    }));
-    setVoiceWaves(waves);
-  }, []);
-
   // 智能滚动处理 - 使用防抖的消息长度
   useEffect(() => {
     if (messagesLength > 0) {

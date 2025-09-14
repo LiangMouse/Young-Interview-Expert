@@ -60,3 +60,11 @@ export interface VoiceRecordingState {
   transcript: string;
   confidence: number;
 }
+
+export interface InterviewRecord {
+  date: string;
+  type: string;
+  score: number;
+  duration: string;
+  status: string;
+}

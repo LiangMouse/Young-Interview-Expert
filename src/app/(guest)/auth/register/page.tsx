@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MessageCircle, Mail, Lock, Eye, EyeOff, User } from "lucide-react";
+import { getOrCreateUserProfile } from "@/action/user-profile";
 
 export default function RegisterPage() {
   const supabase = createClientComponentClient();
@@ -61,7 +62,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -73,7 +74,8 @@ export default function RegisterPage() {
 
       if (error) {
         setError(error.message);
-      } else {
+      } else if (data.user) {
+        await getOrCreateUserProfile(data.user);
         setSuccess(true);
       }
     } catch (error) {

@@ -1,22 +1,11 @@
 "use client";
-import { useState } from "react";
-import type { User } from "@supabase/auth-helpers-nextjs";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Play,
-  BookOpen,
-  TrendingUp,
   Award,
   Clock,
   MessageCircle,
@@ -26,28 +15,62 @@ import {
 } from "lucide-react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
+import { getRecentInterviews } from "@/action/get-recent-interviews";
+import { InterviewRecord } from "@/types/interview";
+import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useUserStore } from "@/store/user";
+import { IncompleteProfileDialog } from "./incomplete-profile-dialog";
+import { createInterview } from "@/action/create-interview";
+import { logOut as logout } from "@/action/auth";
 
-interface DashboardClientProps {
-  user: User;
-}
-
-export default function DashboardClient({ user }: DashboardClientProps) {
+export default function DashboardClient() {
+  const { userInfo } = useUserStore();
   const [loading, setLoading] = useState(false);
+  const [isDialogOpen, setDialogOpen] = useState(false);
   const supabase = createClientComponentClient();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!userInfo) {
+      router.push("/auth/login");
+    }
+  }, [userInfo, router]);
+
   const handleLogout = async () => {
     setLoading(true);
-    await supabase.auth.signOut();
-    router.push("/auth/login");
-    router.refresh();
+    await logout();
   };
 
-  const userName =
-    user.user_metadata?.name || user.email?.split("@")[0] || "用户";
+  if (!userInfo) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center">
+        <p>正在重定向到登录页面...</p>
+      </div>
+    );
+  }
 
+  const userName = userInfo.nickname || "用户";
+  const handleClickInterview = async () => {
+    if (!userInfo.job_intention || !userInfo.resume_url) {
+      setDialogOpen(true);
+    } else {
+      const result = await createInterview();
+      if (result.interviewId) {
+        router.push(`/interview/${result.interviewId}`);
+      } else {
+        // Handle error, maybe show a toast notification
+        console.error(result.error);
+      }
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-purple-50 to-amber-50">
+      <IncompleteProfileDialog
+        open={isDialogOpen}
+        onOpenChange={setDialogOpen}
+        onConfirm={() => router.push("/profile")}
+      />
       {/* 顶部导航栏 */}
       <header className="backdrop-blur-md bg-white/70 border-b border-white/20 px-6 py-4">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
@@ -73,9 +96,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               <LogOut className="w-4 h-4" />
             </Button>
             <Avatar className="w-8 h-8">
-              <AvatarImage
-                src={user.user_metadata?.avatar_url || "/placeholder.svg"}
-              />
+              <AvatarImage src={userInfo.avatar_url || "/placeholder.svg"} />
               <AvatarFallback>
                 {userName.charAt(0).toUpperCase()}
               </AvatarFallback>
@@ -94,44 +115,20 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             欢迎回到AI面试助手，继续你的面试练习之旅
           </p>
         </div>
-
         {/* 快速操作卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Link href="/interview">
-            <Card className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl hover:shadow-2xl transition-all duration-300 cursor-pointer group">
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <Play className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-semibold text-gray-800 mb-2">开始面试</h3>
-                <p className="text-sm text-gray-600">开始新的AI模拟面试</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/practice">
-            <Card className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl hover:shadow-2xl transition-all duration-300 cursor-pointer group">
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-sky-400 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <BookOpen className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-semibold text-gray-800 mb-2">练习模式</h3>
-                <p className="text-sm text-gray-600">轻松练习面试技巧</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/history">
-            <Card className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl hover:shadow-2xl transition-all duration-300 cursor-pointer group">
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-semibold text-gray-800 mb-2">面试记录</h3>
-                <p className="text-sm text-gray-600">查看历史面试记录</p>
-              </CardContent>
-            </Card>
-          </Link>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+          <Card
+            className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl hover:shadow-2xl transition-all duration-300 cursor-pointer group"
+            onClick={handleClickInterview}
+          >
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Play className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-gray-800 mb-2">开始面试</h3>
+              <p className="text-sm text-gray-600">开始新的AI模拟面试</p>
+            </CardContent>
+          </Card>
 
           <Link href="/profile">
             <Card className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl hover:shadow-2xl transition-all duration-300 cursor-pointer group">
@@ -160,79 +157,101 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                   size="sm"
                   className="text-sky-600 hover:text-sky-700"
                 >
-                  查看全部
+                  开始新的模拟面试
                   <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {[
-                {
-                  date: "2024-01-15",
-                  type: "技术面试",
-                  score: 85,
-                  duration: "25分钟",
-                  status: "completed",
-                },
-                {
-                  date: "2024-01-14",
-                  type: "行为面试",
-                  score: 78,
-                  duration: "18分钟",
-                  status: "completed",
-                },
-                {
-                  date: "2024-01-13",
-                  type: "基础面试",
-                  score: 92,
-                  duration: "22分钟",
-                  status: "completed",
-                },
-              ].map((record, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 bg-white/50 rounded-2xl border border-white/30"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-gradient-to-r from-sky-400 to-purple-400 rounded-xl flex items-center justify-center">
-                      <MessageCircle className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-800">
-                        {record.type}
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        {record.date} · {record.duration}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Badge
-                      variant={record.score >= 80 ? "default" : "secondary"}
-                      className={
-                        record.score >= 80
-                          ? "bg-green-100 text-green-700 hover:bg-green-200"
-                          : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                      }
-                    >
-                      {record.score}分
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-sky-600 hover:text-sky-700"
-                    >
-                      查看详情
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <RecentInterviews />
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function RecentInterviews() {
+  const [records, setRecords] = useState<InterviewRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecords = async () => {
+      try {
+        const data = await getRecentInterviews();
+        setRecords(data);
+      } catch (error) {
+        console.error("Failed to fetch recent interviews:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecords();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {[...Array(3)].map((_, index) => (
+          <div key={index} className="flex items-center justify-between p-4">
+            <div className="flex items-center space-x-4">
+              <Skeleton className="w-10 h-10 rounded-xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-[150px]" />
+                <Skeleton className="h-4 w-[100px]" />
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Skeleton className="h-6 w-[50px] rounded-full" />
+              <Skeleton className="h-8 w-[80px] rounded-md" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {records.map((record, index) => (
+        <div
+          key={index}
+          className="flex items-center justify-between p-4 bg-white/50 rounded-2xl border border-white/30"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 bg-gradient-to-r from-sky-400 to-purple-400 rounded-xl flex items-center justify-center">
+              <MessageCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-800">{record.type}</h4>
+              <p className="text-sm text-gray-600">
+                {record.date} · {record.duration}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Badge
+              variant={record.score >= 80 ? "default" : "secondary"}
+              className={
+                record.score >= 80
+                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+              }
+            >
+              {record.score}分
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-sky-600 hover:text-sky-700"
+            >
+              查看详情
+            </Button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

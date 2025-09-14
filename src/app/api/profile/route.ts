@@ -18,7 +18,7 @@ interface ProfileData {
   created_at?: string;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = createRouteHandlerClient({ cookies });
 
