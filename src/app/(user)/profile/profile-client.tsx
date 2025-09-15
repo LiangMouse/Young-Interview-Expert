@@ -13,15 +13,11 @@ import {
   Home,
   Settings,
   X,
-  Upload,
   User as UserIcon,
   Briefcase,
   Target,
-  FileText,
   MessageCircle,
-  Loader2,
 } from "lucide-react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import type {
   UserProfile,
   WorkExperience,
@@ -29,26 +25,49 @@ import type {
 } from "@/types/profile";
 import { uploadResume } from "@/action/upload-resume";
 import { ResumeParseConfirmDialog } from "@/components/resume-parse-confirm-dialog";
+import { UserResume } from "./component/user_resume";
 
 interface ProfileClientProps {
   user: User;
+  userProfile: UserProfile | null;
 }
 
-export default function ProfileClient({ user }: ProfileClientProps) {
-  const [isEditing, setIsEditing] = useState(false);
+export default function ProfileClient({
+  user,
+  userProfile: initialProfile,
+}: ProfileClientProps) {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(
+    initialProfile,
+  );
   const [formData, setFormData] = useState<any>({
-    nickname: "",
-    bio: "",
-    job_intention: "",
-    skills: "",
-    experience_years: 0,
-    graduation_date: "",
-    work_experiences: [],
-    project_experiences: [],
+    nickname: initialProfile?.nickname || "",
+    bio: initialProfile?.bio || "",
+    job_intention: initialProfile?.job_intention || "",
+    company_intention: initialProfile?.company_intention || "",
+    skills: initialProfile?.skills?.join(", ") || "",
+    experience_years: initialProfile?.experience_years || 0,
+    graduation_date: initialProfile?.graduation_date || "",
+    work_experiences: (initialProfile?.work_experiences || []).map((exp) => ({
+      company: exp.company || "",
+      position: exp.position || "",
+      start_date: exp.start_date || "",
+      end_date: exp.end_date || "",
+      description: exp.description || "",
+    })),
+    project_experiences: (initialProfile?.project_experiences || []).map(
+      (proj) => ({
+        project_name: proj.project_name || "",
+        role: proj.role || "",
+        start_date: proj.start_date || "",
+        end_date: proj.end_date || "",
+        tech_stack: proj.tech_stack || [],
+        description: proj.description || "",
+      }),
+    ),
+    resume_url: initialProfile?.resume_url || "",
   });
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
@@ -150,13 +169,11 @@ export default function ProfileClient({ user }: ProfileClientProps) {
       // 模拟进度更新
       setTimeout(() => setUploadProgress("正在解析PDF内容..."), 1000);
       setTimeout(() => setUploadProgress("正在使用AI分析简历..."), 3000);
-      setTimeout(() => setUploadProgress("正在保存数据..."), 15000);
+      setTimeout(() => setUploadProgress("正在保存数据..."), 20000);
 
       const result = await uploadResume(formData);
-      console.log(result, "提交结果");
 
       if (result.success && result.data) {
-        setUploadProgress("解析完成！");
         setParsedResumeData(result.data);
         setIsConfirmDialogOpen(true);
       } else {
@@ -173,14 +190,76 @@ export default function ProfileClient({ user }: ProfileClientProps) {
 
   const handleConfirmParse = () => {
     if (parsedResumeData) {
-      const { skills, ...restData } = parsedResumeData;
+      const { skills, work_experiences, project_experiences, ...restData } =
+        parsedResumeData;
+
+      const formattedWorkExperiences = (work_experiences || []).map(
+        (exp: any) => ({
+          company: exp.company || "",
+          position: exp.position || "",
+          start_date: exp.start_date || "",
+          end_date: exp.end_date || "",
+          description: Array.isArray(exp.responsibilities)
+            ? exp.responsibilities.join("\n")
+            : exp.description || "",
+        }),
+      );
+
+      const formattedProjectExperiences = (project_experiences || []).map(
+        (proj: any) => {
+          const projDescriptionParts = [];
+          projDescriptionParts.push(proj?.description || "");
+
+          if (Array.isArray(proj.achievements)) {
+            projDescriptionParts.push(...proj.achievements);
+          } else if (Array.isArray(proj.responsibilities)) {
+            projDescriptionParts.push(...proj.responsibilities);
+          }
+
+          return {
+            project_name: proj.name || "",
+            role: proj.role || "",
+            start_date: proj.start_date || "",
+            end_date: proj.end_date || "",
+            tech_stack: Array.isArray(proj.tech_stack) ? proj.tech_stack : [],
+            description: projDescriptionParts.join("\n"),
+          };
+        },
+      );
+
       setFormData((prev: any) => ({
         ...prev,
         ...restData,
-        skills: skills || "",
+        skills: Array.isArray(skills) ? skills.join(", ") : skills || "",
+        work_experiences: formattedWorkExperiences,
+        project_experiences: formattedProjectExperiences,
       }));
-      alert("简历内容已填充！");
     }
+    // TODO
+    /**
+     * {
+    "id": "c0a740eb-cbe6-4d59-92b3-0c3277c04515",
+    "user_id": "73a4e366-fabe-40fd-93c8-1b98ffc0ba40",
+    "nickname": null,
+    "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocIrthMS4fio2Xa5q0DgB0HqEAZcvul2_5UFMvwe6Yj2mF5TUQ=s96-c",
+    "bio": "",
+    "job_intention": null,
+    "skills": [
+        "熟练使用HTML，CSS，掌握常见布局并能对页面高度还原",
+        "熟悉JavaScript和ES语法，了解TypeScript",
+        "熟悉React框架使用，能够使用Vue框架开发",
+        "拥抱AI、对Agent，RAG等AI概念有一定了解，学习并好奇AI领域新技术",
+        "有沉淀整理文档梳理学习记录以及及时复盘的习惯，有自己的博客网站"
+    ],
+    "experience_years": 0,
+    "graduation_date": null,
+    "work_experiences": [],
+    "project_experiences": [],
+    "resume_url": "https://djcntmluajqoolxmvfor.supabase.co/storage/v1/object/public/resumes/73a4e366-fabe-40fd-93c8-1b98ffc0ba40/537b7c31-36a9-42df-bf4b-d133e690a279.pdf",
+    "created_at": "2025-09-14T15:32:12.905648+00:00",
+    "updated_at": "2025-09-15T14:03:08.273957+00:00"
+    }
+     */
     setIsConfirmDialogOpen(false);
     setParsedResumeData(null);
   };
@@ -208,53 +287,8 @@ export default function ProfileClient({ user }: ProfileClientProps) {
     linkElement.click();
   };
 
-  const supabase = createClientComponentClient();
   const userName =
     user.user_metadata?.name || user.email?.split("@")[0] || "用户";
-
-  // 获取用户资料
-  const fetchUserProfile = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/profile");
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error("Error fetching profile:", result.error);
-        return;
-      }
-
-      if (result.data) {
-        setUserProfile(result.data);
-        setFormData({
-          nickname: result.data.nickname || "",
-          bio: result.data.bio || "",
-          job_intention: result.data.job_intention || "",
-          skills: result.data.skills?.join(", ") || "",
-          experience_years: result.data.experience_years || 0,
-          graduation_date: result.data.graduation_date || "",
-          work_experiences: result.data.work_experiences || [],
-          project_experiences: result.data.project_experiences || [],
-        });
-      } else {
-        // 如果没有资料，使用默认值
-        setFormData({
-          nickname: "",
-          bio: "",
-          job_intention: "",
-          skills: "",
-          experience_years: 0,
-          graduation_date: "",
-          work_experiences: [],
-          project_experiences: [],
-        });
-      }
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // 保存用户资料
   const saveProfile = async () => {
@@ -284,7 +318,6 @@ export default function ProfileClient({ user }: ProfileClientProps) {
       }
 
       setUserProfile(result.data);
-      setIsEditing(false);
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -301,26 +334,6 @@ export default function ProfileClient({ user }: ProfileClientProps) {
       [name]: name === "experience_years" ? parseInt(value) || 0 : value,
     }));
   };
-
-  const cancelEdit = () => {
-    if (userProfile) {
-      setFormData({
-        nickname: userProfile.nickname || "",
-        bio: userProfile.bio || "",
-        job_intention: userProfile.job_intention || "",
-        skills: userProfile.skills?.join(", ") || "",
-        experience_years: userProfile.experience_years || 0,
-        graduation_date: userProfile.graduation_date || "",
-        work_experiences: userProfile.work_experiences || [],
-        project_experiences: userProfile.project_experiences || [],
-      });
-    }
-    setIsEditing(false);
-  };
-
-  useEffect(() => {
-    fetchUserProfile();
-  }, [user.id]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-purple-50 to-amber-50">
@@ -371,69 +384,15 @@ export default function ProfileClient({ user }: ProfileClientProps) {
           {/* Left Column */}
           <div className="col-span-1 flex flex-col gap-6">
             {/* 简历导入 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="w-5 h-5" />
-                  简历导入
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div
-                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                    isUploading
-                      ? "border-blue-400 bg-blue-50"
-                      : "border-gray-300 hover:border-blue-400"
-                  }`}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (e.dataTransfer.files && !isUploading) {
-                      setResumeFile(e.dataTransfer.files[0]);
-                      handleResumeUpload(e.dataTransfer.files[0]);
-                    }
-                  }}
-                >
-                  {isUploading ? (
-                    <div className="flex flex-col items-center">
-                      <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-3" />
-                      <p className="text-sm text-blue-600 mb-2 font-medium">
-                        {uploadProgress}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        预计需要 20-30 秒，请耐心等待...
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm text-gray-600 mb-2">
-                        {resumeFile
-                          ? `已选择文件: ${resumeFile.name}`
-                          : "拖拽PDF简历到此处或点击上传"}
-                      </p>
-                      <Input
-                        id="resume-upload"
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileChange}
-                        accept=".pdf"
-                        disabled={isUploading}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          document.getElementById("resume-upload")?.click()
-                        }
-                        disabled={isUploading}
-                      >
-                        选择文件
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <UserResume
+              isUploading={isUploading}
+              uploadProgress={uploadProgress}
+              resumeUrl={formData.resume_url}
+              resumeFile={resumeFile}
+              handleFileChange={handleFileChange}
+              handleResumeUpload={handleResumeUpload}
+              setResumeFile={setResumeFile}
+            />
             {/* 预览信息 */}
             <Card>
               <CardContent className="flex flex-col gap-3 pt-6">
@@ -498,27 +457,14 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                     placeholder="请输入意向岗位"
                   />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* 教育背景 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  教育背景
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label htmlFor="graduation_date">毕业时间</Label>
+                  <Label htmlFor="company_intention">意向公司（可多个）</Label>
                   <Input
-                    id="graduation_date"
-                    name="graduation_date"
-                    value={formData.graduation_date}
+                    id="company_intention"
+                    name="company_intention"
+                    value={formData.company_intention || ""}
                     onChange={handleInputChange}
-                    type="month"
-                    placeholder="----年--月"
+                    placeholder="请输入意向公司"
                   />
                 </div>
               </CardContent>
@@ -586,39 +532,11 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                                 placeholder="职位"
                               />
                             </div>
-                            <div className="space-y-1">
-                              <Label>开始时间</Label>
-                              <Input
-                                type="month"
-                                value={exp.start_date}
-                                onChange={(e) =>
-                                  handleWorkExperienceChange(
-                                    index,
-                                    "start_date",
-                                    e.target.value,
-                                  )
-                                }
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label>结束时间</Label>
-                              <Input
-                                type="month"
-                                value={exp.end_date}
-                                onChange={(e) =>
-                                  handleWorkExperienceChange(
-                                    index,
-                                    "end_date",
-                                    e.target.value,
-                                  )
-                                }
-                              />
-                            </div>
                             <div className="col-span-2 space-y-1">
                               <Label>工作描述</Label>
                               <textarea
                                 className="w-full min-h-[80px] p-2 border rounded-md"
-                                value={exp.description}
+                                value={exp?.description}
                                 onChange={(e) =>
                                   handleWorkExperienceChange(
                                     index,
@@ -704,55 +622,11 @@ export default function ProfileClient({ user }: ProfileClientProps) {
                                 placeholder="担任角色"
                               />
                             </div>
-                            <div className="space-y-1">
-                              <Label>开始时间</Label>
-                              <Input
-                                type="month"
-                                value={proj.start_date}
-                                onChange={(e) =>
-                                  handleProjectExperienceChange(
-                                    index,
-                                    "start_date",
-                                    e.target.value,
-                                  )
-                                }
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label>结束时间</Label>
-                              <Input
-                                type="month"
-                                value={proj.end_date}
-                                onChange={(e) =>
-                                  handleProjectExperienceChange(
-                                    index,
-                                    "end_date",
-                                    e.target.value,
-                                  )
-                                }
-                              />
-                            </div>
-                            <div className="col-span-2 space-y-1">
-                              <Label>技术栈 (用逗号分隔)</Label>
-                              <Input
-                                value={proj.tech_stack.join(", ")}
-                                onChange={(e) =>
-                                  handleProjectExperienceChange(
-                                    index,
-                                    "tech_stack",
-                                    e.target.value
-                                      .split(",")
-                                      .map((s) => s.trim()),
-                                  )
-                                }
-                                placeholder="技术栈"
-                              />
-                            </div>
                             <div className="col-span-2 space-y-1">
                               <Label>项目描述</Label>
                               <textarea
                                 className="w-full min-h-[80px] p-2 border rounded-md"
-                                value={proj.description}
+                                value={proj?.description}
                                 onChange={(e) =>
                                   handleProjectExperienceChange(
                                     index,

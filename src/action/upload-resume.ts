@@ -2,47 +2,173 @@
 
 import { createServerActionClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
-import { analyzeResume } from "./analyze-resume";
 import { v4 as uuidv4 } from "uuid";
-import { parsePdf } from "./parse-pdf"; // 将PDF解析成文本
+import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+import { z } from "zod";
+import { ChatOpenAI } from "@langchain/openai";
+import { JsonOutputParser } from "@langchain/core/output_parsers";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+
+const zodSchema = z.object({
+  nickname: z.string().optional().describe("Nickname"),
+  email: z.string().optional().describe("Email address"),
+  job_intention: z.string().optional().describe("Intended job position"),
+  company: z.string().optional().describe("Intended company"),
+  skills: z.array(z.string()).optional().describe("List of skills"),
+  experience_years: z
+    .number()
+    .optional()
+    .describe("Years of professional experience"),
+  school: z.string().optional().describe("Name of the school or university"),
+  major: z.string().optional().describe("Major field of study"),
+  degree: z.string().optional().describe("Degree obtained"),
+  graduation_date: z.string().optional().describe("Graduation date"),
+  work_experiences: z
+    .array(
+      z.object({
+        company: z.string().optional().describe("Company name"),
+        position: z.string().optional().describe("Position held"),
+        start_date: z.string().optional().describe("Start date of employment"),
+        end_date: z.string().optional().describe("End date of employment"),
+        description: z
+          .string()
+          .optional()
+          .describe("Description of responsibilities and achievements"),
+      }),
+    )
+    .optional()
+    .describe("List of work experiences"),
+  project_experiences: z
+    .array(
+      z.object({
+        project_name: z.string().optional().describe("Project name"),
+        role: z.string().optional().describe("Role in the project"),
+        start_date: z.string().optional().describe("Start date of the project"),
+        end_date: z.string().optional().describe("End date of the project"),
+        tech_stack: z
+          .array(z.string())
+          .optional()
+          .describe("Technologies used in the project"),
+        description: z
+          .string()
+          .optional()
+          .describe("Description of the project"),
+      }),
+    )
+    .optional()
+    .describe("List of project experiences"),
+});
+
+export type ResumeData = z.infer<typeof zodSchema>;
+
+async function parsePdf(formData: FormData) {
+  try {
+    const file = formData.get("file") as File;
+
+    if (!file) {
+      throw new Error("No file provided");
+    }
+
+    const loader = new PDFLoader(file);
+    const docs = await loader.load();
+    const fullText = docs.map((doc) => doc.pageContent).join("\n");
+
+    return {
+      success: true,
+      text: fullText,
+    };
+  } catch (error) {
+    console.error("Error parsing PDF:", error);
+
+    return {
+      success: false,
+      error: "Failed to parse PDF",
+    };
+  }
+}
+
+async function analyzeResume(
+  text: string,
+): Promise<
+  { success: true; data: ResumeData } | { success: false; error: string }
+> {
+  try {
+    const model = new ChatOpenAI({
+      modelName: "deepseek-chat",
+      temperature: 0,
+      apiKey: process.env.DEEPSEEK_V3_API,
+      configuration: {
+        baseURL: "https://api.deepseek.com/v1",
+      },
+    });
+
+    const parser = new JsonOutputParser<ResumeData>();
+
+    const prompt = ChatPromptTemplate.fromTemplate(
+      `You are an AI assistant that analyzes a resume and extracts key information.
+      Please format your output as a JSON object that strictly follows the provided JSON schema.
+      Do not include any other text or explanations in your response, only the JSON object.
+      
+      JSON Schema:
+      {format_instructions}
+      
+      Resume Text:
+      {text}`,
+    );
+
+    const chain = prompt.pipe(model).pipe(parser);
+
+    const result = await chain.invoke({
+      text: text,
+      format_instructions: parser.getFormatInstructions(),
+    });
+
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (error) {
+    console.error("Error analyzing resume:", error);
+    return {
+      success: false,
+      error: "Failed to analyze resume",
+    };
+  }
+}
 
 export async function uploadResume(formData: FormData) {
-  const supabase = createServerActionClient({ cookies });
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, error: "User not authenticated" };
-  }
-
-  const file = formData.get("file") as File;
-  console.log("file", file);
-  if (!file) {
-    return { success: false, error: "No file provided" };
-  }
-  // TODO error in after
   try {
+    const supabase = createServerActionClient({ cookies });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "User not authenticated" };
+    }
+
+    const file = formData.get("file") as File;
+    if (!file) {
+      return { success: false, error: "No file provided" };
+    }
+
     // 1. Parse PDF
-    const { text, success, error } = await parsePdf(formData);
+    const { text, success, error: parseError } = await parsePdf(formData);
 
     if (!success) {
       return {
         success: false,
-        error,
+        error: parseError,
       };
     }
     // 2. Analyze Resume
-    console.log("Analyzing resume text...");
     const analyzeResult = await analyzeResume(text!);
     console.log("Analyze result:", analyzeResult);
-
     if (!analyzeResult.success) {
       return { success: false, error: analyzeResult.error };
     }
 
     // 3. Upload file to Supabase Storage
-    console.log("Uploading file to storage...");
     const fileName = `${user.id}/${uuidv4()}.pdf`;
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -68,56 +194,43 @@ export async function uploadResume(formData: FormData) {
     const publicUrl = publicUrlData.publicUrl;
 
     // 5. 更新用户资料
-    console.log("Updating user profile...");
-    try {
-      // 使用简化的数据库字段结构
-      const profileUpdateData = {
-        nickname: analyzeResult.data.nickname,
-        job_intention: analyzeResult.data.job_intention,
-        skills: analyzeResult.data.skills || [],
-        experience_years: analyzeResult.data.experience_years,
-        graduation_date: analyzeResult.data.graduation_date,
-        work_experiences: analyzeResult.data.work_experiences || [],
-        project_experiences: analyzeResult.data.project_experiences || [],
-        resume_url: publicUrl,
-        updated_at: new Date().toISOString(),
-      };
+    // 使用简化的数据库字段结构
+    // 以下是使用langchain dsv3返回的抽象数据
+    const aiData = analyzeResult.data as any;
+    const profileUpdateData = {
+      nickname:
+        aiData.nickname || (aiData.contact_info && aiData.contact_info.name),
+      job_intention: analyzeResult.data.job_intention || "",
+      skills: analyzeResult.data.skills || [],
+      work_experiences: aiData.work_experience || [],
+      project_experiences: aiData.projects || [],
+      resume_url: publicUrl,
+      updated_at: new Date().toISOString(),
+    };
 
-      // 过滤掉undefined值
-      const filteredData = Object.fromEntries(
-        Object.entries(profileUpdateData).filter(
-          ([_, value]) => value !== undefined,
-        ),
-      );
+    // 过滤掉undefined值
+    const filteredData = Object.fromEntries(
+      Object.entries(profileUpdateData).filter(
+        ([_, value]) => value !== undefined,
+      ),
+    );
 
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .update(filteredData)
-        .eq("user_id", user.id)
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .update(filteredData)
+      .eq("user_id", user.id)
+      .select()
+      .single();
 
-      if (error) {
-        console.error("Profile update error:", error);
-        return {
-          success: false,
-          error: `Profile update error: ${error.message}`,
-        };
-      }
-
-      console.log("Profile updated:", data);
-      return { success: true, data };
-    } catch (e) {
-      const error = e as Error;
-      console.error(
-        "An unexpected error occurred during profile update:",
-        error,
-      );
+    if (error) {
+      console.error("Profile update error:", error);
       return {
         success: false,
-        error: `An unexpected error occurred: ${error.message}`,
+        error: `Profile update error: ${error.message}`,
       };
     }
+
+    return { success: true, data };
   } catch (e) {
     const error = e as Error;
     console.error("Upload resume error:", error);

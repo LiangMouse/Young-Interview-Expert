@@ -36,11 +36,10 @@ export function ResumeParseConfirmDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>否，仅做附件上传</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            className="bg-red-500 hover:bg-red-600"
-          >
+          <AlertDialogCancel className="cursor-pointer">
+            否，仅做附件上传
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} className="cursor-pointer">
             是，需同步更新简历内容
           </AlertDialogAction>
         </AlertDialogFooter>

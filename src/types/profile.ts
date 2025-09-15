@@ -23,6 +23,7 @@ export interface UserProfile {
   avatar_url: string | null;
   bio: string | null;
   job_intention: string | null;
+  company_intention: string | null;
   skills: string[] | null; // text[]
   experience_years: number | null; // integer
   graduation_date: string | null;

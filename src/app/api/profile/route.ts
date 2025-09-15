@@ -4,15 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 interface ProfileData {
   user_id: string;
-  full_name: string;
   bio: string;
-  phone: string;
-  location: string;
-  job_title: string;
   job_intention: string;
+  company_intention: string;
   skills: string[];
   experience_years: number;
-  education: string;
   avatar_url: string;
   updated_at: string;
   created_at?: string;
@@ -68,15 +64,11 @@ export async function POST(request: NextRequest) {
     // 准备用户资料数据
     const profileData: ProfileData = {
       user_id: session.user.id,
-      full_name: body.full_name || "",
       bio: body.bio || "",
-      phone: body.phone || "",
-      location: body.location || "",
-      job_title: body.job_title || "",
       job_intention: body.job_intention || "",
+      company_intention: body.company_intention || "",
       skills: Array.isArray(body.skills) ? body.skills : [],
       experience_years: parseInt(body.experience_years) || 0,
-      education: body.education || "",
       avatar_url: session.user.user_metadata?.avatar_url || "",
       updated_at: new Date().toISOString(),
     };
