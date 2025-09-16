@@ -1,4 +1,4 @@
-import type { User } from "@supabase/auth-helpers-nextjs";
+import type { User } from "@/types/auth";
 
 export interface Message {
   id: string;

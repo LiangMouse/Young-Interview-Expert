@@ -13,7 +13,7 @@ import {
   LogOut,
   ArrowRight,
 } from "lucide-react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { getRecentInterviews } from "@/action/get-recent-interviews";
 import { InterviewRecord } from "@/types/interview";
@@ -28,7 +28,7 @@ export default function DashboardClient() {
   const { userInfo } = useUserStore();
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setDialogOpen] = useState(false);
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const router = useRouter();
 
   useEffect(() => {

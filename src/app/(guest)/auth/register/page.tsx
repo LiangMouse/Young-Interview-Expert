@@ -3,7 +3,7 @@
 import type React from "react";
 
 import { useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import { MessageCircle, Mail, Lock, Eye, EyeOff, User } from "lucide-react";
 import { getOrCreateUserProfile } from "@/action/user-profile";
 
 export default function RegisterPage() {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [formData, setFormData] = useState({
     name: "",
     email: "",

@@ -17,12 +17,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { MessageCircle, Mail, Lock, Eye, EyeOff, Github } from "lucide-react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/client";
 import { useUserStore } from "@/store/user";
 import { getOrCreateUserProfile } from "@/action/user-profile";
 
 export default function LoginPage() {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const { setUserInfo } = useUserStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

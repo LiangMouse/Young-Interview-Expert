@@ -1,13 +1,12 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
 
   if (code) {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
     /**- 向 Supabase 的认证服务器发送一个请求，请求中包含了从 URL 中获取的 code 。
            Supabase 服务器验证这个 code 的有效性。
            如果验证通过，服务器会生成一个用户会话（Session），并将其返回给我们的 Next.js 服务器。

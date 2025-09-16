@@ -1,14 +1,13 @@
 "use server";
 
-import { createServerActionClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
-import type { User } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/server";
+import type { User } from "@supabase/supabase-js";
 import type { UserProfile } from "@/types/profile";
 
 export async function getOrCreateUserProfile(
   user: User,
 ): Promise<UserProfile | null> {
-  const supabase = createServerActionClient({ cookies });
+  const supabase = await createClient();
 
   try {
     // 检查用户个人资料是否存在

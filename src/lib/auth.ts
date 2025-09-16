@@ -1,4 +1,4 @@
-import { createServerActionClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
 /**
@@ -7,7 +7,7 @@ import { cookies } from "next/headers";
  */
 export async function getCurrentUser() {
   try {
-    const supabase = createServerActionClient({ cookies });
+    const supabase = await createClient();
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -23,7 +23,7 @@ export async function getCurrentUser() {
  */
 export async function getCurrentSession() {
   try {
-    const supabase = createServerActionClient({ cookies });
+    const supabase = await createClient();
     const {
       data: { session },
     } = await supabase.auth.getSession();

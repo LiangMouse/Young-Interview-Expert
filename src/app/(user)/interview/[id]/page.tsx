@@ -1,11 +1,10 @@
-import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import InterviewClient from "./client";
 import { getCurrentUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
 
 async function getInterview(id: string) {
-  const supabase = createServerComponentClient({ cookies });
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("interviews")
     .select("*, user:profiles(*)")

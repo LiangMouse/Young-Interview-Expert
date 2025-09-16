@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { createServerActionClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   let session = null;
   try {
-    const supabase = createServerActionClient({ cookies });
+    const supabase = await createClient();
     session = await supabase.auth.getSession().then((res) => res.data.session);
   } catch {
     /* ignore – 多数为未配置 env */

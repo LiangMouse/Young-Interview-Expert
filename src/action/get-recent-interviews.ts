@@ -1,12 +1,11 @@
 "use server";
 
 import { InterviewRecord } from "@/types/interview";
-import { createServerActionClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 
 export async function getRecentInterviews(): Promise<InterviewRecord[]> {
-  const supabase = createServerActionClient({ cookies });
+  const supabase = await createClient();
   const user = await getCurrentUser();
 
   if (!user) {

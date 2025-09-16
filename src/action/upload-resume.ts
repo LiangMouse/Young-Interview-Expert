@@ -1,7 +1,6 @@
 "use server";
 
-import { createServerActionClient } from "@supabase/auth-helpers-nextjs";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { v4 as uuidv4 } from "uuid";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { z } from "zod";
@@ -138,7 +137,7 @@ async function analyzeResume(
 
 export async function uploadResume(formData: FormData) {
   try {
-    const supabase = createServerActionClient({ cookies });
+    const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
