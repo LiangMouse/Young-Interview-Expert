@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-
+import { toast } from "sonner";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -46,10 +46,10 @@ export default function LoginPage() {
       } else if (data.user) {
         const userProfile = await getOrCreateUserProfile(data.user);
         if (userProfile) {
-          console.log("zustang赋值前", userProfile);
           setUserInfo(userProfile);
         }
         router.push("/dashboard");
+        toast.success("登录成功~");
       }
     } catch (error) {
       setError("登录时发生错误，请稍后重试");
@@ -173,6 +173,7 @@ export default function LoginPage() {
                 type="submit"
                 disabled={loading}
                 className="w-full rounded-2xl bg-gradient-to-r from-sky-400 to-purple-400 hover:from-sky-500 hover:to-purple-500 text-white font-medium py-3"
+                loading={loading}
               >
                 {loading ? "登录中..." : "登录"}
               </Button>

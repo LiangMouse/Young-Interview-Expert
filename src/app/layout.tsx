@@ -4,6 +4,7 @@ import "./globals.css";
 import StoreInitializer from "@/components/store-initializer";
 import { getOrCreateUserProfile } from "@/action/user-profile";
 import { createClient } from "@/lib/supabase/server";
+import { SingletonProvider } from "@/components/singleton-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -35,6 +36,7 @@ export default async function RootLayout({
       <body className={inter.className}>
         <StoreInitializer userInfo={userProfile} />
         {children}
+        <SingletonProvider />
       </body>
     </html>
   );

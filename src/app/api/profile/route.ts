@@ -3,11 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 
 interface ProfileData {
   user_id: string;
+  nickname: string;
   bio: string;
   job_intention: string;
   company_intention: string;
   skills: string[];
   experience_years: number;
+  graduation_date?: string;
+  work_experiences?: any[];
+  project_experiences?: any[];
+  resume_url?: string;
   avatar_url: string;
   updated_at: string;
   created_at?: string;
@@ -63,11 +68,16 @@ export async function POST(request: NextRequest) {
     // 准备用户资料数据
     const profileData: ProfileData = {
       user_id: session.user.id,
+      nickname: body.nickname || "",
       bio: body.bio || "",
       job_intention: body.job_intention || "",
       company_intention: body.company_intention || "",
       skills: Array.isArray(body.skills) ? body.skills : [],
       experience_years: parseInt(body.experience_years) || 0,
+      graduation_date: body.graduation_date || "",
+      work_experiences: body.work_experiences || [],
+      project_experiences: body.project_experiences || [],
+      resume_url: body.resume_url || "",
       avatar_url: session.user.user_metadata?.avatar_url || "",
       updated_at: new Date().toISOString(),
     };

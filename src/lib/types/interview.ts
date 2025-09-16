@@ -1,4 +1,5 @@
 import type { User } from "@/types/auth";
+import type { UserProfile } from "@/types/profile";
 
 export interface Message {
   id: string;
@@ -17,4 +18,5 @@ export interface VoiceWave {
 export interface InterviewClientProps {
   user: User;
   interview: any;
+  userProfile: UserProfile | null;
 }

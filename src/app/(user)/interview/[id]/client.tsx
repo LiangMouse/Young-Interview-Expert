@@ -5,7 +5,6 @@ import { InterviewClientProps } from "@/lib/types";
 import { useState, useRef, useEffect, memo } from "react";
 import { useDebounce } from "use-debounce";
 import { useMemoizedFn, useInterval } from "ahooks";
-import { useLocalStorage } from "react-use";
 import { motion, AnimatePresence } from "framer-motion";
 import { throttle } from "lodash";
 import Link from "next/link";
@@ -15,32 +14,20 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Send,
   Mic,
   MicOff,
-  Upload,
-  FileText,
-  ChevronRight,
-  ChevronDown,
   Pause,
   RotateCcw,
   Settings,
   MessageCircle,
-  Heart,
-  Star,
   ArrowLeft,
   Home,
   Loader2,
 } from "lucide-react";
 import { useChat } from "@/hooks/useChat";
-
-interface VoiceWave {
-  id: number;
-  height: number;
-  delay: number;
-}
+import { SYSTEM_PROMPT } from "@/lib/prompts/analytics";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -97,21 +84,12 @@ const MessageItem = memo(
 
 MessageItem.displayName = "MessageItem";
 
-export default function InterviewClient({ user }: InterviewClientProps) {
+export default function InterviewClient({
+  user,
+  userProfile,
+}: InterviewClientProps) {
   const [inputMessage, setInputMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  // 使用 react-use 的 useLocalStorage 持久化面板状态
-  const [isRightPanelOpen, setIsRightPanelOpen] = useLocalStorage(
-    "interview-right-panel-open",
-    true,
-  );
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [voiceWaves, setVoiceWaves] = useState<VoiceWave[]>([]);
-  // 持久化评论展开状态
-  const [isCommentExpanded, setIsCommentExpanded] = useLocalStorage(
-    "interview-comment-expanded",
-    false,
-  );
   const [interviewStartTime] = useState(new Date());
   const [interactionCount, setInteractionCount] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -140,23 +118,11 @@ export default function InterviewClient({ user }: InterviewClientProps) {
       });
     }, 200), // 200ms 节流
   );
-  // TODO 待修复
   // 初始化欢迎消息
   useEffect(() => {
     if (messages.length === 0) {
-      const systemPrompt = `你是一位专业的AI面试官，名叫小智。你的任务是帮助求职者进行模拟面试练习。
-
-请遵循以下原则：
-1. 保持专业、友善、耐心的态度
-2. 根据用户的岗位需求提出相关的面试问题
-3. 对用户的回答给出建设性的反馈和建议
-4. 逐步深入，从基础问题到深度问题
-5. 适时给予鼓励和指导
-6. 用中文进行交流
-
-现在请向用户问好，并询问他们想要面试什么岗位。`;
-
-      sendMessage(systemPrompt, "system");
+      // 发送系统提示词
+      sendMessage(SYSTEM_PROMPT, "system");
     }
   }, [messages.length, sendMessage]);
 
@@ -204,7 +170,7 @@ export default function InterviewClient({ user }: InterviewClientProps) {
     setInteractionCount(0);
     // 重新发送系统消息
     setTimeout(() => {
-      const systemPrompt = `你是一位专业的AI面试官，名叫小智。我们重新开始一场模拟面试。
+      const systemPrompt = `你是一位专业的AI面试官，名叫小面。我们重新开始一场模拟面试。
 
 请遵循以下原则：
 1. 保持专业、友善、耐心的态度
@@ -219,13 +185,6 @@ export default function InterviewClient({ user }: InterviewClientProps) {
       sendMessage(systemPrompt, "system");
     }, 100);
   };
-  // 简历上传
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setUploadedFile(file);
-    }
-  };
 
   const toggleRecording = () => {
     setIsRecording(!isRecording);
@@ -237,14 +196,14 @@ export default function InterviewClient({ user }: InterviewClientProps) {
       <header className="backdrop-blur-md bg-white/70 border-b border-white/20 px-6 py-4">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center space-x-3">
-            <Link href="/dashboard">
+            <Link href="/dashboard" className="flex items-center space-x-3">
               <Button variant="ghost" size="sm" className="rounded-full">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
+              <div className="w-8 h-8 bg-gradient-to-r from-sky-400 to-purple-400 rounded-lg flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-white" />
+              </div>
             </Link>
-            <div className="w-8 h-8 bg-gradient-to-r from-sky-400 to-purple-400 rounded-lg flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-white" />
-            </div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-sky-600 to-purple-600 bg-clip-text text-transparent">
               AI智能面试助手
             </h1>
@@ -289,7 +248,7 @@ export default function InterviewClient({ user }: InterviewClientProps) {
                     </div>
                   )}
                 </div>
-                <h3 className="font-semibold text-gray-800">小智 AI面试官</h3>
+                <h3 className="font-semibold text-gray-800">小面 AI面试官</h3>
                 <p className="text-sm text-gray-600">专业 · 友善 · 耐心</p>
               </div>
 
@@ -302,29 +261,7 @@ export default function InterviewClient({ user }: InterviewClientProps) {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
                     className="flex items-center justify-center space-x-1 mb-4"
-                  >
-                    {voiceWaves.map((wave) => (
-                      <motion.div
-                        key={wave.id}
-                        className="w-1 bg-gradient-to-t from-sky-400 to-purple-400 rounded-full"
-                        animate={{
-                          height: [
-                            wave.height * 0.5,
-                            wave.height,
-                            wave.height * 0.5,
-                          ],
-                          opacity: [0.5, 1, 0.5],
-                        }}
-                        transition={{
-                          duration: 1.5,
-                          repeat: Infinity,
-                          delay: wave.delay,
-                          ease: "easeInOut",
-                        }}
-                        style={{ height: `${wave.height}px` }}
-                      />
-                    ))}
-                  </motion.div>
+                  ></motion.div>
                 )}
               </AnimatePresence>
 
@@ -336,11 +273,11 @@ export default function InterviewClient({ user }: InterviewClientProps) {
                     variant="secondary"
                     className="bg-sky-100 text-sky-700"
                   >
-                    练习模式
+                    {"练习模式"}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-white/50 rounded-2xl">
-                  <span className="text-sm text-gray-600">已进行时间</span>
+                  <span className="text-sm text-gray-600">已进行</span>
                   <span className="text-sm font-medium text-gray-800">
                     {getElapsedTime()}
                   </span>
@@ -586,205 +523,6 @@ export default function InterviewClient({ user }: InterviewClientProps) {
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* 右侧 - 简历预览和AI点评 */}
-        <div
-          className={`transition-all duration-300 ${isRightPanelOpen ? "w-80" : "w-12"}`}
-        >
-          <div className="h-full flex flex-col">
-            {/* 折叠按钮 */}
-            <Button
-              onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-              variant="ghost"
-              size="sm"
-              className="mb-2 rounded-2xl backdrop-blur-md bg-white/60"
-            >
-              {isRightPanelOpen ? (
-                <ChevronRight className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </Button>
-
-            {isRightPanelOpen && (
-              <div className="flex-1 space-y-4">
-                {/* 简历上传 */}
-                <Card className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base text-gray-800 flex items-center">
-                      <FileText className="w-4 h-4 mr-2" />
-                      简历管理
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {uploadedFile ? (
-                      <div className="p-4 bg-white/50 rounded-2xl">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-r from-sky-400 to-purple-400 rounded-xl flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-800">
-                              {uploadedFile.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {(uploadedFile.size / 1024).toFixed(1)} KB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full mt-3 rounded-xl bg-transparent"
-                        >
-                          重新上传
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <input
-                          type="file"
-                          accept=".pdf,.doc,.docx"
-                          onChange={handleFileUpload}
-                          className="hidden"
-                          id="resume-upload"
-                        />
-                        <label
-                          htmlFor="resume-upload"
-                          className="cursor-pointer block p-6 border-2 border-dashed border-sky-200 rounded-2xl hover:border-sky-300 transition-colors"
-                        >
-                          <Upload className="w-8 h-8 mx-auto mb-2 text-sky-400" />
-                          <p className="text-sm text-gray-600">上传简历</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            支持 PDF、Word 格式
-                          </p>
-                        </label>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* AI智能点评 */}
-                <Card className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base text-gray-800 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Star className="w-4 h-4 mr-2" />
-                        AI智能点评
-                      </div>
-                      <Button
-                        onClick={() => setIsCommentExpanded(!isCommentExpanded)}
-                        variant="ghost"
-                        size="sm"
-                        className="rounded-full p-1 h-6 w-6"
-                      >
-                        {isCommentExpanded ? (
-                          <ChevronDown className="w-3 h-3" />
-                        ) : (
-                          <ChevronRight className="w-3 h-3" />
-                        )}
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {/* <span>&emsp;</span>  */}
-                    <div
-                      className={`space-y-3 transition-all duration-300 overflow-hidden ${
-                        isCommentExpanded ? "max-h-none" : "max-h-32"
-                      }`}
-                    >
-                      <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-100">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                          <span className="text-sm font-medium text-green-700">
-                            表现优秀
-                          </span>
-                        </div>
-                        <p className="text-xs text-green-600">
-                          回答逻辑清晰，表达流畅自然，展现了良好的沟通能力。
-                        </p>
-                      </div>
-
-                      <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-100">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
-                          <span className="text-sm font-medium text-amber-700">
-                            待改进
-                          </span>
-                        </div>
-                        <p className="text-xs text-amber-600">
-                          可以增加更多具体的项目经验描述，让回答更有说服力。
-                        </p>
-                      </div>
-
-                      <div className="p-3 bg-gradient-to-r from-sky-50 to-blue-50 rounded-2xl border border-sky-100">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <div className="w-2 h-2 bg-sky-400 rounded-full"></div>
-                          <span className="text-sm font-medium text-sky-700">
-                            建议
-                          </span>
-                        </div>
-                        <p className="text-xs text-sky-600">
-                          建议准备一些关于团队合作的具体案例，这是常见的面试问题。
-                        </p>
-                      </div>
-
-                      {/* 额外的点评内容，用于演示收起功能 */}
-                      <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-100">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                          <span className="text-sm font-medium text-purple-700">
-                            技术深度
-                          </span>
-                        </div>
-                        <p className="text-xs text-purple-600">
-                          在技术问题回答中，可以更深入地讨论实现细节和技术选型的考虑因素。
-                        </p>
-                      </div>
-
-                      <div className="p-3 bg-gradient-to-r from-rose-50 to-red-50 rounded-2xl border border-rose-100">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <div className="w-2 h-2 bg-rose-400 rounded-full"></div>
-                          <span className="text-sm font-medium text-rose-700">
-                            沟通技巧
-                          </span>
-                        </div>
-                        <p className="text-xs text-rose-600">
-                          注意在回答问题时保持适当的眼神交流，语速适中，展现自信的态度。
-                        </p>
-                      </div>
-                    </div>
-
-                    {!isCommentExpanded && (
-                      <div className="text-center mt-2">
-                        <Button
-                          onClick={() => setIsCommentExpanded(true)}
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs text-gray-500 hover:text-gray-700"
-                        >
-                          查看更多点评...
-                        </Button>
-                      </div>
-                    )}
-
-                    <Separator className="my-4" />
-
-                    <div className="text-center">
-                      <div className="inline-flex items-center space-x-2 text-sm text-gray-600">
-                        <Heart className="w-4 h-4 text-red-400" />
-                        <span>综合评分: 85分</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        继续加油，你很棒！
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

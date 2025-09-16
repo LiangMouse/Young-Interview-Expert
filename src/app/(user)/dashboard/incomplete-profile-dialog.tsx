@@ -33,7 +33,7 @@ export function IncompleteProfileDialog({
             完善个人信息
           </DialogTitle>
           <DialogDescription className="text-center text-gray-600 mt-2 px-4">
-            为了给您提供更精准的模拟面试体验，我们强烈建议您先完善个人信息并上传简历。这有助于模拟面试官更好地了解您的背景和求职意向。
+            为了给您提供更精准的模拟面试体验，我们强烈建议您先上传简历完善求职信息和意向岗位。这有助于模拟面试官提供更优质服务。
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-6 flex sm:justify-center space-x-4">

@@ -2,7 +2,7 @@
 
 export interface User {
   id: string;
-  email: string | undefined;
+  email?: string;
   name?: string;
   avatar_url?: string;
   user_metadata?: {

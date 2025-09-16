@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Play,
@@ -13,27 +12,31 @@ import {
   LogOut,
   ArrowRight,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { getRecentInterviews } from "@/action/get-recent-interviews";
-import { InterviewRecord } from "@/types/interview";
 import { useEffect, useState } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useUserStore } from "@/store/user";
 import { IncompleteProfileDialog } from "./incomplete-profile-dialog";
 import { createInterview } from "@/action/create-interview";
 import { logOut as logout } from "@/action/auth";
+import RecentInterviews from "./components/recentInterviews";
 
 export default function DashboardClient() {
   const { userInfo } = useUserStore();
+  console.log(userInfo, "用户信息");
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setDialogOpen] = useState(false);
-  const supabase = createClient();
   const router = useRouter();
 
   useEffect(() => {
+    // 如果没有用户信息，等待一段时间让持久化状态恢复
     if (!userInfo) {
-      router.push("/auth/login");
+      const timer = setTimeout(() => {
+        if (!useUserStore.getState().userInfo) {
+          router.push("/auth/login");
+        }
+      }, 100); // 给持久化状态恢复一些时间
+
+      return () => clearTimeout(timer);
     }
   }, [userInfo, router]);
 
@@ -157,7 +160,7 @@ export default function DashboardClient() {
                   size="sm"
                   className="text-sky-600 hover:text-sky-700"
                 >
-                  开始新的模拟面试
+                  来一次新的面试🥳
                   <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
@@ -168,90 +171,6 @@ export default function DashboardClient() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
-}
-
-function RecentInterviews() {
-  const [records, setRecords] = useState<InterviewRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchRecords = async () => {
-      try {
-        const data = await getRecentInterviews();
-        setRecords(data);
-      } catch (error) {
-        console.error("Failed to fetch recent interviews:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecords();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, index) => (
-          <div key={index} className="flex items-center justify-between p-4">
-            <div className="flex items-center space-x-4">
-              <Skeleton className="w-10 h-10 rounded-xl" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[150px]" />
-                <Skeleton className="h-4 w-[100px]" />
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Skeleton className="h-6 w-[50px] rounded-full" />
-              <Skeleton className="h-8 w-[80px] rounded-md" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {records.map((record, index) => (
-        <div
-          key={index}
-          className="flex items-center justify-between p-4 bg-white/50 rounded-2xl border border-white/30"
-        >
-          <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-sky-400 to-purple-400 rounded-xl flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-800">{record.type}</h4>
-              <p className="text-sm text-gray-600">
-                {record.date} · {record.duration}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <Badge
-              variant={record.score >= 80 ? "default" : "secondary"}
-              className={
-                record.score >= 80
-                  ? "bg-green-100 text-green-700 hover:bg-green-200"
-                  : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-              }
-            >
-              {record.score}分
-            </Badge>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-sky-600 hover:text-sky-700"
-            >
-              查看详情
-            </Button>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import type { User } from "@/types/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
   Target,
   MessageCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import type {
   UserProfile,
   WorkExperience,
@@ -26,6 +27,7 @@ import type {
 import { uploadResume } from "@/action/upload-resume";
 import { ResumeParseConfirmDialog } from "@/components/resume-parse-confirm-dialog";
 import { UserResume } from "./component/user_resume";
+import { useUserStore } from "@/store/user";
 
 interface ProfileClientProps {
   user: User;
@@ -36,6 +38,7 @@ export default function ProfileClient({
   user,
   userProfile: initialProfile,
 }: ProfileClientProps) {
+  const { setUserInfo } = useUserStore();
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -235,31 +238,6 @@ export default function ProfileClient({
         project_experiences: formattedProjectExperiences,
       }));
     }
-    // TODO
-    /**
-     * {
-    "id": "c0a740eb-cbe6-4d59-92b3-0c3277c04515",
-    "user_id": "73a4e366-fabe-40fd-93c8-1b98ffc0ba40",
-    "nickname": null,
-    "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocIrthMS4fio2Xa5q0DgB0HqEAZcvul2_5UFMvwe6Yj2mF5TUQ=s96-c",
-    "bio": "",
-    "job_intention": null,
-    "skills": [
-        "熟练使用HTML，CSS，掌握常见布局并能对页面高度还原",
-        "熟悉JavaScript和ES语法，了解TypeScript",
-        "熟悉React框架使用，能够使用Vue框架开发",
-        "拥抱AI、对Agent，RAG等AI概念有一定了解，学习并好奇AI领域新技术",
-        "有沉淀整理文档梳理学习记录以及及时复盘的习惯，有自己的博客网站"
-    ],
-    "experience_years": 0,
-    "graduation_date": null,
-    "work_experiences": [],
-    "project_experiences": [],
-    "resume_url": "https://djcntmluajqoolxmvfor.supabase.co/storage/v1/object/public/resumes/73a4e366-fabe-40fd-93c8-1b98ffc0ba40/537b7c31-36a9-42df-bf4b-d133e690a279.pdf",
-    "created_at": "2025-09-14T15:32:12.905648+00:00",
-    "updated_at": "2025-09-15T14:03:08.273957+00:00"
-    }
-     */
     setIsConfirmDialogOpen(false);
     setParsedResumeData(null);
   };
@@ -314,12 +292,17 @@ export default function ProfileClient({
 
       if (!response.ok) {
         console.error("Error saving profile:", result.error);
+        toast.error("用户信息保存失败，请稍后重试");
         return;
       }
 
       setUserProfile(result.data);
+      // 更新全局状态，确保其他页面能获取到最新的用户信息
+      setUserInfo(result.data);
+      toast.success("用户信息保存成功");
     } catch (error) {
       console.error("Error:", error);
+      toast.error("用户信息保存失败，请稍后重试");
     } finally {
       setLoading(false);
     }
@@ -402,7 +385,11 @@ export default function ProfileClient({
                 >
                   预览信息
                 </Button>
-                <Button className="w-full" onClick={saveProfile}>
+                <Button
+                  className="w-full"
+                  onClick={saveProfile}
+                  loading={loading}
+                >
                   保存信息
                 </Button>
                 <Button

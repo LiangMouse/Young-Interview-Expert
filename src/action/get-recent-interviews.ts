@@ -25,7 +25,16 @@ export async function getRecentInterviews(): Promise<InterviewRecord[]> {
       return [];
     }
 
-    return data as InterviewRecord[];
+    // 确保数据格式正确
+    const formattedData = (data || []).map((item) => ({
+      date: item.date ? new Date(item.date).toLocaleDateString("zh-CN") : "",
+      type: item.type || "练习模式",
+      score: item.score || 0,
+      duration: item.duration || "0分钟",
+      status: item.status || "pending",
+    }));
+
+    return formattedData;
   } catch (error) {
     console.error("Unexpected error fetching recent interviews:", error);
     return [];

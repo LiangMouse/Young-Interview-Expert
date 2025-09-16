@@ -10,6 +10,7 @@ interface Message {
 interface UseChatOptions {
   onFinish?: (message: string) => void;
   onError?: (error: Error) => void;
+  systemPrompt?: string;
 }
 
 interface UseChatReturn {
@@ -131,13 +132,22 @@ export function useChat(options: UseChatOptions = {}) {
       currentAssistantMessageRef.current = "";
 
       try {
+        // 构建消息数组，如果有自定义系统提示词则使用，否则使用默认的
+        const messagesToSend = options.systemPrompt
+          ? [
+              { role: "system" as const, content: options.systemPrompt },
+              ...messages,
+              userMessage,
+            ]
+          : [...messages, userMessage];
+
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            messages: [...messages, userMessage],
+            messages: messagesToSend,
           }),
         });
 
