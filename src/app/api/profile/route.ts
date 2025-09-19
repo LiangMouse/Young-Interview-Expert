@@ -24,10 +24,11 @@ export async function GET() {
 
     // 获取当前用户
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user || authError) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 
@@ -35,7 +36,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from("user_profiles")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .single();
 
     if (error && error.code !== "PGRST116") {
@@ -56,10 +57,11 @@ export async function POST(request: NextRequest) {
 
     // 获取当前用户
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user || authError) {
       return NextResponse.json({ error: "未授权" }, { status: 401 });
     }
 
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // 准备用户资料数据
     const profileData: ProfileData = {
-      user_id: session.user.id,
+      user_id: user.id,
       nickname: body.nickname || "",
       bio: body.bio || "",
       job_intention: body.job_intention || "",
@@ -78,7 +80,7 @@ export async function POST(request: NextRequest) {
       work_experiences: body.work_experiences || [],
       project_experiences: body.project_experiences || [],
       resume_url: body.resume_url || "",
-      avatar_url: session.user.user_metadata?.avatar_url || "",
+      avatar_url: user.user_metadata?.avatar_url || "",
       updated_at: new Date().toISOString(),
     };
 
@@ -86,7 +88,7 @@ export async function POST(request: NextRequest) {
     const { data: existingProfile } = await supabase
       .from("user_profiles")
       .select("id")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .single();
 
     if (!existingProfile) {

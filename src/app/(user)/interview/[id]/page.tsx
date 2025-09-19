@@ -41,9 +41,12 @@ export default async function InterviewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const resolvedParams = await params;
+  // Await params before accessing its properties (Next.js 15 requirement)
+  const { id } = await params;
+
+  // The Promise.all is an efficient way to fetch data concurrently.
   const [interview, user] = await Promise.all([
-    getInterview(resolvedParams.id),
+    getInterview(id),
     getCurrentUser(),
   ]);
 
@@ -55,7 +58,6 @@ export default async function InterviewPage({
     notFound();
   }
 
-  // 获取用户详细资料用于个性化面试
   const userProfile = await getUserProfile(user.id);
 
   return (

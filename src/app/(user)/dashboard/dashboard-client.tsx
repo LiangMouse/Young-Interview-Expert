@@ -15,7 +15,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useUserStore } from "@/store/user";
-import { IncompleteProfileDialog } from "./incomplete-profile-dialog";
+import { IncompleteProfileDialog } from "./components/incomplete-profile-dialog";
 import { createInterview } from "@/action/create-interview";
 import { logOut as logout } from "@/action/auth";
 import RecentInterviews from "./components/recentInterviews";

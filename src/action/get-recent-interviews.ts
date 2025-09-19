@@ -15,7 +15,7 @@ export async function getRecentInterviews(): Promise<InterviewRecord[]> {
   try {
     const { data, error } = await supabase
       .from("interviews")
-      .select("date, type, score, duration, status")
+      .select("id, date, type, score, duration, status")
       .eq("user_id", user.id)
       .order("date", { ascending: false })
       .limit(3);
@@ -27,6 +27,7 @@ export async function getRecentInterviews(): Promise<InterviewRecord[]> {
 
     // 确保数据格式正确
     const formattedData = (data || []).map((item) => ({
+      id: item.id,
       date: item.date ? new Date(item.date).toLocaleDateString("zh-CN") : "",
       type: item.type || "练习模式",
       score: item.score || 0,

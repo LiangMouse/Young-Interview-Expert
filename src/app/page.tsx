@@ -14,7 +14,11 @@ export default async function Home() {
   let session = null;
   try {
     const supabase = await createClient();
-    session = await supabase.auth.getSession().then((res) => res.data.session);
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    session = user && !error ? { user } : null;
   } catch {
     /* ignore – 多数为未配置 env */
   }

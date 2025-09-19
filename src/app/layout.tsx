@@ -25,11 +25,11 @@ export default async function RootLayout({
 }) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const userProfile = session?.user
-    ? await getOrCreateUserProfile(session.user)
-    : null;
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  const userProfile =
+    user && !error ? await getOrCreateUserProfile(user) : null;
 
   return (
     <html lang="zh-CN">

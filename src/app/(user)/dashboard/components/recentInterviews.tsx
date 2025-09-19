@@ -7,10 +7,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 function RecentInterviews() {
   const [records, setRecords] = useState<InterviewRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchRecords = async () => {
@@ -27,6 +29,10 @@ function RecentInterviews() {
 
     fetchRecords();
   }, []);
+
+  const handleClick = (id: string) => {
+    router.push(`/interview/${id}`);
+  };
 
   if (loading) {
     return (
@@ -52,9 +58,9 @@ function RecentInterviews() {
 
   return (
     <div className="space-y-4">
-      {records.map((record, index) => (
+      {records.map((record) => (
         <div
-          key={index}
+          key={record.id}
           className="flex items-center justify-between p-4 bg-white/50 rounded-2xl border border-white/30"
         >
           <div className="flex items-center space-x-4">
@@ -77,12 +83,13 @@ function RecentInterviews() {
                   : "bg-amber-100 text-amber-700 hover:bg-amber-200"
               }
             >
-              {record.score ?? "分数未知"}
+              {record.score || "分数未知"}
             </Badge>
             <Button
               variant="ghost"
               size="sm"
               className="text-sky-600 hover:text-sky-700"
+              onClick={() => handleClick(record.id)}
             >
               查看详情
             </Button>

@@ -62,6 +62,7 @@ export interface VoiceRecordingState {
 }
 
 export interface InterviewRecord {
+  id: string;
   date: string;
   type: string;
   score: number;
