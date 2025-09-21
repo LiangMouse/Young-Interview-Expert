@@ -1,0 +1,44 @@
+"use client";
+
+import { useChat as useAIChat } from "@ai-sdk/react";
+import type { UIMessage } from "@ai-sdk/react";
+
+interface UsePersonalizedChatOptions {
+  id: string;
+  messages: UIMessage[];
+  userId?: string;
+  enablePersonalization?: boolean;
+  onFinish?: (options: any) => void;
+  onError?: (error: Error) => void;
+}
+
+export function usePersonalizedChat({
+  id,
+  messages,
+  userId,
+  enablePersonalization = true,
+  onFinish,
+  onError,
+}: UsePersonalizedChatOptions) {
+  const chat = useAIChat({
+    id,
+    messages,
+    onFinish,
+    onError,
+  });
+
+  // 重写 sendMessage 方法，自动添加 body 参数
+  const originalSendMessage = chat.sendMessage;
+  chat.sendMessage = (message, options = {}) => {
+    return originalSendMessage(message, {
+      ...options,
+      body: {
+        ...options.body,
+        userId,
+        enablePersonalization,
+      },
+    });
+  };
+
+  return chat;
+}

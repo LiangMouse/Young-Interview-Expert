@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useMemoizedFn, useInterval } from "ahooks";
-import { useChat } from "@ai-sdk/react";
+import { usePersonalizedChat } from "@/hooks/usePersonalizedChat";
 import type { UIMessage } from "@ai-sdk/react";
 import {
   addUserMessage,
@@ -15,7 +15,7 @@ import {
 } from "@/lib/chat-utils";
 import { useSocket } from "@/hooks/useSocket";
 import { differenceInSeconds } from "date-fns";
-import { SYSTEM_PROMPT } from "@/lib/prompts/analytics";
+import { SYSTEM_PROMPT } from "@/lib/prompt/analytics";
 import { UserProfile } from "@/types/profile";
 
 interface UseInterviewLogicProps {
@@ -85,29 +85,22 @@ export function useInterviewLogic({
 
   // Memoize initial messages to prevent recreation on every render
   const initialMessages: UIMessage[] = useMemo(() => {
-    // 如果有历史消息，使用历史消息，否则使用默认问候语
+    // 如果有历史消息，使用历史消息，否则让AI动态生成个性化开场
     if (historyMessages.length > 0) {
       return historyMessages;
     } else {
-      return [
-        {
-          id: "greeting",
-          role: "assistant" as const,
-          parts: [
-            {
-              type: "text",
-              text: `你好，${userName}！我是你的 AI 面试官。准备好后，我们可以随时开始。`,
-            },
-          ],
-        },
-      ];
+      // 返回空数组，让AI根据用户档案动态生成个性化开场白
+      // 这样AI会基于用户背景、求职意向等信息生成更智能的开场
+      return [];
     }
-  }, [userName, historyMessages]);
+  }, [historyMessages]);
 
-  // 使用 @ai-sdk/react 的 useChat hook
-  const interviewChat = useChat({
+  // 使用自定义的个性化聊天hook
+  const interviewChat = usePersonalizedChat({
     id: `interview-${interview.id}`,
     messages: initialMessages,
+    userId: user?.id,
+    enablePersonalization: true,
     onFinish: async (options) => {
       setInteractionCount((prev) => prev + 1);
 
@@ -153,6 +146,43 @@ export function useInterviewLogic({
   const { messages, sendMessage, regenerate, stop, status, error } =
     interviewChat;
   const isLoading = status === "streaming" || status === "submitted";
+
+  // 自动触发个性化开场（仅在首次进入且无历史消息时）
+  useEffect(() => {
+    if (
+      !isLoadingHistory &&
+      historyMessages.length === 0 &&
+      messages.length === 0 &&
+      user?.id &&
+      userProfile
+    ) {
+      // 发送一个触发词让AI生成个性化开场白
+      sendMessage(
+        {
+          role: "user",
+          parts: [
+            {
+              type: "text",
+              text: "你好，我想开始面试",
+            },
+          ],
+        },
+        {
+          body: {
+            userId: user.id,
+            enablePersonalization: true,
+          },
+        },
+      );
+    }
+  }, [
+    isLoadingHistory,
+    historyMessages.length,
+    messages.length,
+    user?.id,
+    userProfile,
+    sendMessage,
+  ]);
 
   // 自己管理 input 状态，因为 AI SDK 5.0+ 不直接提供
   const [input, setInput] = useState("");

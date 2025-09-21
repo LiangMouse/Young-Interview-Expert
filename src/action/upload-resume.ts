@@ -7,6 +7,7 @@ import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
 import { JsonOutputParser } from "@langchain/core/output_parsers";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { userProfileService } from "@/lib/user-profile-service";
 
 const zodSchema = z.object({
   nickname: z.string().optional().describe("Nickname"),
@@ -227,6 +228,25 @@ export async function uploadResume(formData: FormData) {
         success: false,
         error: `Profile update error: ${error.message}`,
       };
+    }
+
+    // 6. 向量化用户档案
+    try {
+      const vectorizeResult = await userProfileService.vectorizeUserProfile(
+        user.id,
+      );
+      if (!vectorizeResult.success) {
+        console.warn("向量化用户档案失败:", vectorizeResult.error);
+        // 不返回错误，因为简历上传已经成功
+      } else {
+        console.log(
+          "用户档案向量化成功，文档数量:",
+          vectorizeResult.documentCount,
+        );
+      }
+    } catch (vectorizeError) {
+      console.warn("向量化用户档案时发生错误:", vectorizeError);
+      // 不返回错误，因为简历上传已经成功
     }
 
     return { success: true, data };

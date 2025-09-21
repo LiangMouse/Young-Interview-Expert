@@ -141,27 +141,40 @@ export async function profileToVectorDocuments(
  */
 export async function storeVectorDocuments(
   documents: VectorDocument[],
+  userId: string,
 ): Promise<void> {
   const supabase = createClient();
 
-  for (const doc of documents) {
-    // 生成文档的向量嵌入
-    const embedding = await generateEmbedding(doc.content);
+  // 为每个文档添加用户ID到元数据
+  const documentsWithUserId = documents.map((doc) => ({
+    ...doc,
+    metadata: {
+      ...doc.metadata,
+      user_id: userId,
+    },
+  }));
 
-    // 存储到向量数据库
-    const { error } = await supabase.from("user_profile_vectors").upsert({
-      id: doc.id,
-      content: doc.content,
-      metadata: doc.metadata,
-      embedding: embedding,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+  // 生成所有文档的向量嵌入
+  const documentsWithEmbeddings = await Promise.all(
+    documentsWithUserId.map(async (doc) => {
+      const embedding = await generateEmbedding(doc.content);
+      return {
+        id: doc.id,
+        content: doc.content,
+        metadata: doc.metadata,
+        embedding: embedding,
+      };
+    }),
+  );
 
-    if (error) {
-      console.error("Error storing vector document:", error);
-      throw error;
-    }
+  // 使用RPC函数批量存储
+  const { error } = await supabase.rpc("upsert_user_profile_vectors", {
+    p_documents: documentsWithEmbeddings,
+  });
+
+  if (error) {
+    console.error("Error storing vector documents:", error);
+    throw error;
   }
 }
 
@@ -342,7 +355,7 @@ export async function executeRAGPipeline(
     const documents = await profileToVectorDocuments(userProfile);
 
     // 2. 存储到向量数据库
-    await storeVectorDocuments(documents);
+    await storeVectorDocuments(documents, userProfile.user_id);
 
     // 3. 检索相关文档
     const relevantDocs = await retrieveRelevantDocuments(
