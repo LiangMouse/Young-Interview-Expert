@@ -1,256 +1,127 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getDeepSeekClient,
+  validateDeepSeekConfig,
+} from "@/lib/deepseek-client";
+import { convertToCoreMessages } from "@/lib/chat-utils";
+import { streamText } from "ai";
 
-// DeepSeek API proxy - DeepSeek is OpenAI compatible
+/**
+ * 处理聊天消息的 POST 请求
+ *
+ * 调用路径：
+ * - 前端：useChat hook -> /api/chat
+ * - 组件：ChatInterface -> useInterviewLogic -> useChat -> /api/chat
+ *
+ * 请求格式：AI SDK 5.0 格式
+ * {
+ *   "messages": [...],
+ *   "trigger": "submit-message"
+ * }
+ *
+ * 响应格式：流式文本响应
+ */
 export async function POST(request: NextRequest) {
-  const requestId = Math.random().toString(36).substring(7);
-  console.log(`[${requestId}] Chat API request started`);
-
   try {
-    // 1. 解析请求参数
     const body = await request.json();
-    console.log(`[${requestId}] Request body:`, {
-      messagesCount: body.messages?.length || 0,
-      model: body.model || "deepseek-chat",
-      hasStream: body.stream !== false,
-    });
 
     const { messages, model = "deepseek-chat" } = body;
 
     if (!messages || !Array.isArray(messages)) {
-      console.error(`[${requestId}] Invalid messages array:`, messages);
+      console.error(`Invalid messages array:`, messages);
       return NextResponse.json(
         { error: "Messages array is required" },
         { status: 400 },
       );
     }
 
-    // 2. 检查环境变量
-    if (!process.env.DEEPSEEK_V3_API) {
+    // 2. 验证 DeepSeek 配置
+    const configValidation = validateDeepSeekConfig();
+    if (!configValidation.isValid) {
       console.error(
-        `[${requestId}] DEEPSEEK_V3_API environment variable is not set`,
+        `DeepSeek config validation failed:`,
+        configValidation.error,
       );
       return NextResponse.json(
-        { error: "API key not configured" },
+        { error: configValidation.error || "API key not configured" },
         { status: 500 },
       );
     }
+    // 3. 转换 UIMessage 格式为 Core Messages 格式
+    const coreMessages = convertToCoreMessages(messages);
 
-    // 3. 转换 UIMessage 格式为 DeepSeek 格式
-    const convertedMessages = messages.map((message: any) => {
-      // 如果是 UIMessage 格式（有 parts 属性）
-      if (message.parts && Array.isArray(message.parts)) {
-        // 提取文本内容
-        const textContent = message.parts
-          .filter((part: any) => part.type === "text")
-          .map((part: any) => part.text)
-          .join("");
-
-        return {
-          role: message.role,
-          content: textContent,
-        };
-      }
-      // 如果已经是传统格式（有 content 属性）
-      return {
-        role: message.role,
-        content: message.content,
-      };
-    });
-
-    console.log(`[${requestId}] Converted messages:`, convertedMessages);
-
-    // 4. 构建请求参数
-    const requestPayload = {
-      model,
-      messages: convertedMessages,
-      stream: true,
+    // 4. 使用 @ai-sdk/deepseek 调用 DeepSeek API
+    const deepseekClient = getDeepSeekClient();
+    const result = await streamText({
+      model: deepseekClient(model),
+      messages: coreMessages,
       temperature: 0.7,
-    };
-
-    console.log(`[${requestId}] Sending request to DeepSeek:`, {
-      model: requestPayload.model,
-      messagesCount: requestPayload.messages.length,
-      stream: requestPayload.stream,
-      temperature: requestPayload.temperature,
+      maxOutputTokens: 4000,
     });
 
-    // 4. 发送请求到 DeepSeek
-    const upstream = await fetch(
-      "https://api.deepseek.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.DEEPSEEK_V3_API}`,
-        },
-        body: JSON.stringify(requestPayload),
-      },
-    );
-
-    console.log(`[${requestId}] DeepSeek response status:`, upstream.status);
-    console.log(
-      `[${requestId}] DeepSeek response headers:`,
-      Object.fromEntries(upstream.headers.entries()),
-    );
-
-    if (!upstream.ok) {
-      const text = await upstream.text();
-      console.error(`[${requestId}] DeepSeek API error:`, {
-        status: upstream.status,
-        statusText: upstream.statusText,
-        response: text,
-      });
-      throw new Error(`DeepSeek API error: ${upstream.status} ${text}`);
-    }
-
-    // 5. 检查响应体
-    if (!upstream.body) {
-      console.error(`[${requestId}] DeepSeek response body is null`);
-      throw new Error("DeepSeek response body is null");
-    }
-
-    console.log(
-      `[${requestId}] Successfully received stream from DeepSeek, converting to AI SDK 5.0+ format`,
-    );
-
-    // 6. 转换 DeepSeek 格式为 AI SDK 5.0+ 的 UIMessageChunk 格式
-    const reader = upstream.body.getReader();
-    const decoder = new TextDecoder();
-    const encoder = new TextEncoder();
-
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            console.log(`[${requestId}] Raw chunk:`, chunk);
-
-            const lines = chunk.split("\n");
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                const data = line.slice(6);
-                if (data === "[DONE]") {
-                  console.log(`[${requestId}] Stream completed`);
-                  // 发送结束信号
-                  const messageId = `msg-${Date.now()}`;
-                  controller.enqueue(
-                    encoder.encode(
-                      `data: ${JSON.stringify({ type: "text-end", id: messageId })}\n\n`,
-                    ),
-                  );
-                  break;
-                }
-
-                try {
-                  const parsed = JSON.parse(data);
-                  console.log(`[${requestId}] Parsed data:`, parsed);
-
-                  // 转换为 AI SDK 5.0+ 的 UIMessageChunk 格式
-                  const choices = parsed.choices || [];
-                  const messageId = parsed.id || `msg-${Date.now()}`;
-
-                  for (const choice of choices) {
-                    const delta = choice.delta || {};
-
-                    // 如果是角色开始，发送 text-start
-                    if (delta.role) {
-                      const textStartChunk = {
-                        type: "text-start",
-                        id: messageId,
-                      };
-                      console.log(
-                        `[${requestId}] Sending text-start:`,
-                        textStartChunk,
-                      );
-                      controller.enqueue(
-                        encoder.encode(
-                          `data: ${JSON.stringify(textStartChunk)}\n\n`,
-                        ),
-                      );
-                    }
-
-                    // 如果有内容增量，发送 text-delta
-                    if (delta.content) {
-                      const textDeltaChunk = {
-                        type: "text-delta",
-                        delta: delta.content,
-                        id: messageId,
-                      };
-                      console.log(
-                        `[${requestId}] Sending text-delta:`,
-                        textDeltaChunk,
-                      );
-                      controller.enqueue(
-                        encoder.encode(
-                          `data: ${JSON.stringify(textDeltaChunk)}\n\n`,
-                        ),
-                      );
-                    }
-
-                    // 如果完成，发送 text-end
-                    if (choice.finish_reason) {
-                      const textEndChunk = {
-                        type: "text-end",
-                        id: messageId,
-                      };
-                      console.log(
-                        `[${requestId}] Sending text-end:`,
-                        textEndChunk,
-                      );
-                      controller.enqueue(
-                        encoder.encode(
-                          `data: ${JSON.stringify(textEndChunk)}\n\n`,
-                        ),
-                      );
-                    }
-                  }
-                } catch (e) {
-                  console.warn(`[${requestId}] Invalid JSON in stream:`, data);
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error(`[${requestId}] Stream processing error:`, error);
-          controller.error(error);
-        } finally {
-          try {
-            reader.releaseLock();
-            controller.close();
-          } catch (e) {
-            // Controller might already be closed
-            console.warn(`[${requestId}] Controller already closed`);
-          }
-        }
-      },
-    });
-
-    return new Response(stream, {
+    // 5. 返回流式响应 - 使用 toUIMessageStreamResponse 以支持 useChat
+    const response = result.toUIMessageStreamResponse({
       headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     });
+    return response;
   } catch (error) {
-    console.error(`[${requestId}] Chat API error:`, {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    console.error(` Chat API error:`, {
+      error: errorMessage,
+      stack: errorStack,
+      timestamp: new Date().toISOString(),
     });
+
+    // 根据错误类型返回不同的状态码
+    let statusCode = 500;
+    let errorResponse = "Internal server error";
+
+    if (errorMessage.includes("API key")) {
+      statusCode = 500;
+      errorResponse = "API key not configured";
+    } else if (
+      errorMessage.includes("rate limit") ||
+      errorMessage.includes("quota")
+    ) {
+      statusCode = 429;
+      errorResponse = "Rate limit exceeded";
+    } else if (
+      errorMessage.includes("invalid") ||
+      errorMessage.includes("bad request")
+    ) {
+      statusCode = 400;
+      errorResponse = "Invalid request";
+    } else if (errorMessage.includes("timeout")) {
+      statusCode = 504;
+      errorResponse = "Request timeout";
+    }
 
     return NextResponse.json(
       {
-        error: "Internal server error",
-        requestId,
-        details: error instanceof Error ? error.message : String(error),
+        error: errorResponse,
+        details:
+          process.env.NODE_ENV === "development" ? errorMessage : undefined,
+        timestamp: new Date().toISOString(),
       },
-      { status: 500 },
+      { status: statusCode },
     );
   }
+}
+
+// 处理 OPTIONS 请求（CORS 预检）
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    },
+  });
 }

@@ -9,7 +9,10 @@ import {
   addAiMessage,
   getInterviewWithMessages,
 } from "@/action/interview";
-import { mergeMessagesToConversation } from "@/lib/chat-utils";
+import {
+  mergeMessagesToConversation,
+  type MessageInput,
+} from "@/lib/chat-utils";
 import { useSocket } from "@/hooks/useSocket";
 import { differenceInSeconds } from "date-fns";
 import { SYSTEM_PROMPT } from "@/lib/prompts/analytics";
@@ -67,8 +70,6 @@ export function useInterviewLogic({
                 },
               ],
             }));
-
-            console.log("Loaded chat history:", uiMessages);
             setHistoryMessages(uiMessages);
           }
         }
@@ -81,8 +82,6 @@ export function useInterviewLogic({
 
     loadHistory();
   }, [interview.id]);
-
-  // We'll define socket callbacks after useChat so we can use append safely
 
   // Memoize initial messages to prevent recreation on every render
   const initialMessages: UIMessage[] = useMemo(() => {
@@ -106,52 +105,69 @@ export function useInterviewLogic({
   }, [userName, historyMessages]);
 
   // 使用 @ai-sdk/react 的 useChat hook
-  const chat = useChat({
+  const interviewChat = useChat({
     id: `interview-${interview.id}`,
     messages: initialMessages,
-    onFinish: async (result) => {
-      console.log("Chat finished:", result);
+    onFinish: async (options) => {
       setInteractionCount((prev) => prev + 1);
 
-      // 保存 AI 响应到数据库
-      if (
-        result.message &&
-        result.message.role === "assistant" &&
-        result.message.parts
-      ) {
-        const content = result.message.parts
-          .filter((part: any) => part.type === "text")
-          .map((part: any) => part.text)
-          .join("");
+      // 获取 AI 响应消息
+      const aiMessage = options.message;
 
-        if (content) {
-          try {
-            await addAiMessage(interview.id, content);
-            console.log("AI response saved to database");
-          } catch (error) {
-            console.error("Failed to save AI response:", error);
+      // 同时保存用户消息和 AI 消息到数据库
+      try {
+        // 保存用户消息（使用存储的待保存消息）
+        if (pendingUserMessage) {
+          await addUserMessage(interview.id, pendingUserMessage);
+          setPendingUserMessage(null); // 清除待保存消息
+        }
+
+        // 保存 AI 响应
+        if (aiMessage && aiMessage.role === "assistant") {
+          let aiContent = "";
+
+          // 根据 AI SDK 5.0 官方文档，从 parts 中提取文本内容
+          if (aiMessage.parts && aiMessage.parts.length > 0) {
+            aiContent = aiMessage.parts
+              .filter((part: any) => part.type === "text")
+              .map((part: any) => part.text)
+              .join("");
+          }
+
+          if (aiContent) {
+            await addAiMessage(interview.id, aiContent);
           }
         }
+      } catch (error) {
+        console.error(`❌ [Hook] 保存消息到数据库失败:`, error);
+        // 如果保存失败，清除待保存消息
+        setPendingUserMessage(null);
       }
     },
     onError: (error) => {
-      console.error("Chat error:", error);
+      console.error("Interview chat error:", error);
     },
   });
 
   // 解构出需要的属性和方法
-  const { messages, sendMessage, regenerate, stop, status, error } = chat;
+  const { messages, sendMessage, regenerate, stop, status, error } =
+    interviewChat;
   const isLoading = status === "streaming" || status === "submitted";
 
   // 自己管理 input 状态，因为 AI SDK 5.0+ 不直接提供
   const [input, setInput] = useState("");
 
+  // 存储待保存的用户消息
+  const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(
+    null,
+  );
+
   // 适配 @ai-sdk/react 的 append 方法
   const append = useCallback(
-    (message: { role: string; content: string }) => {
+    (message: MessageInput) => {
       try {
         sendMessage({
-          role: message.role as "user" | "assistant",
+          role: message.role,
           parts: [
             {
               type: "text",
@@ -181,7 +197,7 @@ export function useInterviewLogic({
     },
     [isVoiceMode, append],
   );
-
+  // TODO
   const onAiSpeech = useCallback((speech: string) => {
     console.log("AI Speech received:", speech);
   }, []);
@@ -217,22 +233,15 @@ export function useInterviewLogic({
 
   const handleSendMessage = useMemoizedFn(async (message?: string) => {
     const content = (message || input).trim();
-    console.log("Sending message:", { content, message, input });
 
     if (!content) {
-      console.warn("Empty message, not sending");
       return;
     }
 
-    // 保存用户消息到数据库
-    try {
-      await addUserMessage(interview.id, content);
-      console.log("User message saved to database");
-    } catch (error) {
-      console.error("Failed to save user message:", error);
-    }
+    // 存储待保存的用户消息
+    setPendingUserMessage(content);
 
-    console.log("Appending user message to chat");
+    // 发送消息到 AI（不立即保存到数据库）
     append({ role: "user", content });
     setInput("");
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +54,39 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
     },
     messagesEndRef,
   ) => {
+    // 本地 loading 状态，防止多次点击
+    const [isLocalLoading, setIsLocalLoading] = useState(false);
+
+    // 合并 loading 状态
+    const isActuallyLoading = isLoading || isLocalLoading;
+
+    // 防重复点击的发送函数
+    const handleSendMessage = useCallback(
+      async (message?: string) => {
+        if (isActuallyLoading || isVoiceMode) {
+          return;
+        }
+
+        const content = (message || input).trim();
+        if (!content) {
+          return;
+        }
+
+        setIsLocalLoading(true);
+
+        try {
+          await onSendMessage(message);
+        } catch (error) {
+          console.error("Message send failed:", error);
+        } finally {
+          // 延迟重置本地 loading 状态，确保 UI 更新
+          setTimeout(() => {
+            setIsLocalLoading(false);
+          }, 100);
+        }
+      },
+      [isActuallyLoading, isVoiceMode, input, onSendMessage],
+    );
     return (
       <div className="flex-1 flex flex-col">
         <Card className="flex-1 backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl overflow-hidden flex flex-col">
@@ -78,7 +111,7 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
                     ))}
                 </AnimatePresence>
 
-                {isLoading &&
+                {isActuallyLoading &&
                   messages[messages.length - 1]?.role === "user" && (
                     <motion.div
                       key="loading"
@@ -139,23 +172,29 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
                       if (v !== input) setInput(v);
                     }}
                     placeholder={
-                      isLoading ? "AI正在回复中..." : "输入你的问题或回答..."
+                      isActuallyLoading
+                        ? "AI正在回复中..."
+                        : "输入你的问题或回答..."
                     }
                     className="pr-12 rounded-2xl border-white/30 bg-white/50 backdrop-blur-sm"
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey && !isLoading) {
-                        onSendMessage();
+                      if (
+                        e.key === "Enter" &&
+                        !e.shiftKey &&
+                        !isActuallyLoading
+                      ) {
+                        handleSendMessage();
                       }
                     }}
-                    disabled={isLoading || isVoiceMode}
+                    disabled={isActuallyLoading || isVoiceMode}
                   />
                   <Button
-                    onClick={() => onSendMessage()}
+                    onClick={() => handleSendMessage()}
                     size="sm"
                     className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-gradient-to-r from-sky-400 to-purple-400 hover:from-sky-500 hover:to-purple-500"
-                    disabled={isLoading || !input.trim() || isVoiceMode}
+                    disabled={isActuallyLoading || !input.trim() || isVoiceMode}
                   >
-                    {isLoading ? (
+                    {isActuallyLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <motion.div
@@ -172,14 +211,14 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
                   isVoiceMode={isVoiceMode}
                   isSpeaking={isSpeaking}
                   isRecording={isRecording}
-                  isLoading={isLoading}
+                  isLoading={isActuallyLoading}
                   onVoiceModeToggle={onVoiceModeToggle}
                   onStopTTS={onStopTTS}
                   onToggleRecording={onToggleRecording}
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2 text-center">
-                {isLoading
+                {isActuallyLoading
                   ? "AI正在思考，请稍候..."
                   : isVoiceMode
                     ? isListening

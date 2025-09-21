@@ -5,14 +5,6 @@ import { InterviewClientProps } from "@/lib/types/interview";
 import { VoiceModeDialog } from "./components/voice-mode-dialog";
 import { PageHeader } from "./components/page-header";
 import { InterviewInfoPanel } from "./components/interview-info-panel";
-// Inline chat UI to reduce complexity
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Send, Loader2 } from "lucide-react";
-import { UIMessage } from "@ai-sdk/react";
-import { MessageItem } from "./components/message-item";
 import { useVoiceFeatures } from "./hooks/useVoiceFeatures";
 import { useInterviewLogic } from "./hooks/useInterviewLogic";
 import { ChatInterface } from "./components/chat-interface";
