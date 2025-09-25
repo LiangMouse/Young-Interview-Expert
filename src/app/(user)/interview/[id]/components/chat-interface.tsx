@@ -1,10 +1,10 @@
 "use client";
 
-import { forwardRef, useState, useCallback, useEffect } from "react";
+import { forwardRef, useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 // Temporarily avoid Radix ScrollArea to eliminate update-depth loops
 import { Send, Loader2 } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
@@ -56,9 +56,24 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
   ) => {
     // 本地 loading 状态，防止多次点击
     const [isLocalLoading, setIsLocalLoading] = useState(false);
+    // 文本区域引用，用于自动调整高度
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // 合并 loading 状态
     const isActuallyLoading = isLoading || isLocalLoading;
+
+    // 自动调整文本区域高度
+    const adjustTextareaHeight = useCallback(() => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+      }
+    }, []);
+
+    // 当输入内容变化时调整高度
+    useEffect(() => {
+      adjustTextareaHeight();
+    }, [input, adjustTextareaHeight]);
 
     // 防重复点击的发送函数
     const handleSendMessage = useCallback(
@@ -76,6 +91,10 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
 
         try {
           await onSendMessage(message);
+          // 发送成功后重置文本区域高度
+          if (textareaRef.current) {
+            textareaRef.current.style.height = "auto";
+          }
         } catch (error) {
           console.error("Message send failed:", error);
         } finally {
@@ -165,7 +184,8 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
                   className="flex-1 relative"
                   whileFocus={{ scale: 1.01 }}
                 >
-                  <Input
+                  <Textarea
+                    ref={textareaRef}
                     value={input}
                     onChange={(e) => {
                       const v = e.target.value;
@@ -174,24 +194,26 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
                     placeholder={
                       isActuallyLoading
                         ? "AI正在回复中..."
-                        : "输入你的问题或回答..."
+                        : "输入你的问题或回答... (Shift+Enter换行，Enter发送)"
                     }
-                    className="pr-12 rounded-2xl border-white/30 bg-white/50 backdrop-blur-sm"
+                    className="pr-12 rounded-2xl border-white/30 bg-white/50 backdrop-blur-sm resize-none min-h-[44px] max-h-[120px]"
                     onKeyDown={(e) => {
                       if (
                         e.key === "Enter" &&
                         !e.shiftKey &&
                         !isActuallyLoading
                       ) {
+                        e.preventDefault();
                         handleSendMessage();
                       }
                     }}
                     disabled={isActuallyLoading || isVoiceMode}
+                    rows={1}
                   />
                   <Button
                     onClick={() => handleSendMessage()}
                     size="sm"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl bg-gradient-to-r from-sky-400 to-purple-400 hover:from-sky-500 hover:to-purple-500"
+                    className="absolute right-2 top-2 rounded-xl bg-gradient-to-r from-sky-400 to-purple-400 hover:from-sky-500 hover:to-purple-500"
                     disabled={isActuallyLoading || !input.trim() || isVoiceMode}
                   >
                     {isActuallyLoading ? (

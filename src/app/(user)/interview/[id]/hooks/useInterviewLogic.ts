@@ -147,7 +147,7 @@ export function useInterviewLogic({
     interviewChat;
   const isLoading = status === "streaming" || status === "submitted";
 
-  // 自动触发个性化开场（仅在首次进入且无历史消息时）
+  // 自动触发自我介绍开场（仅在首次进入且无历史消息时）
   useEffect(() => {
     if (
       !isLoadingHistory &&
@@ -156,7 +156,7 @@ export function useInterviewLogic({
       user?.id &&
       userProfile
     ) {
-      // 发送一个触发词让AI生成个性化开场白
+      // 发送一个触发词让AI执行“仅请求自我介绍”的开场
       sendMessage(
         {
           role: "user",

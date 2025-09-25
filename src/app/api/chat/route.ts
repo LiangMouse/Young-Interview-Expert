@@ -17,8 +17,8 @@ import {
 import {
   BASE_INTERVIEWER_PROMPT,
   CONVERSATION_HISTORY_GUIDANCE,
-  FIRST_CONVERSATION_GUIDANCE,
   FALLBACK_PROMPT,
+  SELF_INTRO_OPENING_ONLY,
 } from "@/lib/prompt";
 /**
  * 处理聊天消息的 POST 请求
@@ -89,9 +89,13 @@ export async function POST(request: NextRequest) {
           // 添加对话历史管理指导
           systemPrompt += CONVERSATION_HISTORY_GUIDANCE;
 
-          // 如果是第一次对话，让AI面试官主动开始
-          if (messages.length === 1 && messages[0].role === "user") {
-            systemPrompt += FIRST_CONVERSATION_GUIDANCE;
+          // 如果是首次对话（无消息或仅有一条用户触发），让AI面试官主动开始
+          if (
+            messages.length === 0 ||
+            (messages.length === 1 && messages[0].role === "user")
+          ) {
+            // 仅请求自我介绍的开场
+            systemPrompt += SELF_INTRO_OPENING_ONLY;
           } else {
             // 非首次对话，添加对话历史指导
             systemPrompt += "\n\n## 对话历史指导\n";

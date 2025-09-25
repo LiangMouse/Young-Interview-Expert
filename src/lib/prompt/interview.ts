@@ -20,6 +20,18 @@ export const CONVERSATION_HISTORY_GUIDANCE = `
 export const FIRST_CONVERSATION_GUIDANCE = `
 请主动开始面试，以友好的方式欢迎候选人，然后引导他们进行自我介绍`;
 
+// 仅请求自我介绍的开场提示词（严格）
+export const SELF_INTRO_OPENING_ONLY = `
+## 开场指令（仅请求自我介绍）
+你将作为面试官开始本次面试。请以一句简短且礼貌的欢迎语开场，随后只提出一个问题：请候选人进行自我介绍。
+
+必须遵循：
+1. 只提一个问题：请候选人做自我介绍。
+2. 不提出任何其它技术、项目或多问题合并的提问。
+3. 不进行总结或评价，也不提前进入下一环节。
+4. 语气自然、专业、友好，句式简洁。
+`;
+
 // 错误处理时的默认提示词
 export const FALLBACK_PROMPT = `${BASE_INTERVIEWER_PROMPT}${CONVERSATION_HISTORY_GUIDANCE}`;
 

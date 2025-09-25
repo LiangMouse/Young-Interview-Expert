@@ -13,7 +13,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useUserStore } from "@/store/user";
 import { IncompleteProfileDialog } from "./components/incomplete-profile-dialog";
 import { createInterview } from "@/action/create-interview";
@@ -24,6 +24,7 @@ export default function DashboardClient() {
   const { userInfo } = useUserStore();
   console.log(userInfo, "用户信息");
   const [loading, setLoading] = useState(false);
+  const [interviewLoading, setInterviewLoading] = useState(false);
   const [isDialogOpen, setDialogOpen] = useState(false);
   const router = useRouter();
 
@@ -38,12 +39,45 @@ export default function DashboardClient() {
 
       return () => clearTimeout(timer);
     }
+    // 明确返回 undefined 当 userInfo 存在时
+    return undefined;
   }, [userInfo, router]);
 
   const handleLogout = async () => {
     setLoading(true);
     await logout();
   };
+
+  // 防抖处理函数
+  const handleClickInterview = useCallback(async () => {
+    // 如果正在loading，直接返回
+    if (interviewLoading) {
+      return;
+    }
+
+    if (!userInfo?.job_intention || !userInfo?.resume_url) {
+      setDialogOpen(true);
+      return;
+    }
+
+    try {
+      setInterviewLoading(true);
+      const result = await createInterview();
+
+      if (result.interviewId) {
+        router.push(`/interview/${result.interviewId}`);
+      } else {
+        // Handle error, maybe show a toast notification
+        console.error(result.error);
+        // 可以在这里添加错误提示
+      }
+    } catch (error) {
+      console.error("创建面试失败:", error);
+      // 可以在这里添加错误提示
+    } finally {
+      setInterviewLoading(false);
+    }
+  }, [userInfo, interviewLoading, router]);
 
   if (!userInfo) {
     return (
@@ -54,19 +88,6 @@ export default function DashboardClient() {
   }
 
   const userName = userInfo.nickname || "用户";
-  const handleClickInterview = async () => {
-    if (!userInfo.job_intention || !userInfo.resume_url) {
-      setDialogOpen(true);
-    } else {
-      const result = await createInterview();
-      if (result.interviewId) {
-        router.push(`/interview/${result.interviewId}`);
-      } else {
-        // Handle error, maybe show a toast notification
-        console.error(result.error);
-      }
-    }
-  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-purple-50 to-amber-50">
       <IncompleteProfileDialog
@@ -121,15 +142,33 @@ export default function DashboardClient() {
         {/* 快速操作卡片 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
           <Card
-            className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl hover:shadow-2xl transition-all duration-300 cursor-pointer group"
+            className={`backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl transition-all duration-300 group ${
+              interviewLoading
+                ? "cursor-not-allowed opacity-60"
+                : "hover:shadow-2xl cursor-pointer"
+            }`}
             onClick={handleClickInterview}
           >
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <Play className="w-6 h-6 text-white" />
+              <div
+                className={`w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-400 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-transform ${
+                  interviewLoading ? "animate-pulse" : "group-hover:scale-110"
+                }`}
+              >
+                {interviewLoading ? (
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Play className="w-6 h-6 text-white" />
+                )}
               </div>
-              <h3 className="font-semibold text-gray-800 mb-2">开始面试</h3>
-              <p className="text-sm text-gray-600">开始新的AI模拟面试</p>
+              <h3 className="font-semibold text-gray-800 mb-2">
+                {interviewLoading ? "创建面试中..." : "开始面试"}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {interviewLoading
+                  ? "请稍候，正在为您准备面试"
+                  : "开始新的AI模拟面试"}
+              </p>
             </CardContent>
           </Card>
 
