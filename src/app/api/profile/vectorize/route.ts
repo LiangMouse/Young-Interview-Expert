@@ -10,7 +10,6 @@ import {
   generatePersonalizedInterviewPrompt,
 } from "@/lib/profile-rag";
 import { userProfileService } from "@/lib/user-profile-service";
-import type { UserProfile } from "@/types/profile";
 
 /**
  * 用户档案向量化API

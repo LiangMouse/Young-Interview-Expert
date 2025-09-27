@@ -51,7 +51,7 @@ export default function LoginPage() {
         router.push("/dashboard");
         toast.success("登录成功~");
       }
-    } catch (error) {
+    } catch {
       setError("登录时发生错误，请稍后重试");
     } finally {
       setLoading(false);

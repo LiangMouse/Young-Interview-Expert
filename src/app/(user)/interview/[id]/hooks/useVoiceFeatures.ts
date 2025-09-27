@@ -1,15 +1,12 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useMemoizedFn } from "ahooks";
+import type { SimpleMessage } from "@/types/message";
 
 interface UseVoiceFeaturesProps {
   isVoiceMode: boolean;
   onUserSpeech: (transcript: string) => void;
-  onAppendMessage: (message: {
-    role: "user" | "assistant";
-    content: string;
-  }) => void;
+  onAppendMessage: (message: SimpleMessage) => void;
 }
 
 export function useVoiceFeatures({
@@ -25,7 +22,6 @@ export function useVoiceFeatures({
   const [sttError, setSttError] = useState<string | null>(null);
   const [ttsError, setTtsError] = useState<string | null>(null);
 
-  const speechTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const finalTranscriptRef = useRef("");
 
   // 动态加载语音功能
@@ -102,7 +98,7 @@ export function useVoiceFeatures({
       setInterimTranscript(interimTranscript);
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = () => {
       setSttError("语音识别错误");
       setIsListening(false);
     };

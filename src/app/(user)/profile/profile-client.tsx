@@ -42,9 +42,7 @@ export default function ProfileClient({
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(
-    initialProfile,
-  );
+  const [, setUserProfile] = useState<UserProfile | null>(initialProfile);
   const [formData, setFormData] = useState<any>({
     nickname: initialProfile?.nickname || "",
     bio: initialProfile?.bio || "",

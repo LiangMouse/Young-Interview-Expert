@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUserStore } from "@/store/user";
 import type { UIMessage } from "@ai-sdk/react";
+import type { AddMessageFunction } from "@/types/message";
 
 export default function RAGTestPage() {
   const { userInfo } = useUserStore();
@@ -202,7 +203,7 @@ export default function RAGTestPage() {
     });
   };
 
-  const addMessage = (role: "user" | "assistant", content: string) => {
+  const addMessage: AddMessageFunction = (role, content) => {
     const newMessage: UIMessage = {
       id: Date.now().toString(),
       role,
@@ -370,7 +371,7 @@ export default function RAGTestPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2 max-h-60 overflow-y-auto">
-                {conversationHistory.map((message, index) => (
+                {conversationHistory.map((message) => (
                   <div
                     key={message.id}
                     className={`p-2 rounded ${

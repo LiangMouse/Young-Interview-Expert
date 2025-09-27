@@ -78,7 +78,7 @@ export default function RegisterPage() {
         await getOrCreateUserProfile(data.user);
         setSuccess(true);
       }
-    } catch (error) {
+    } catch {
       setError("注册时发生错误，请稍后重试");
     } finally {
       setLoading(false);

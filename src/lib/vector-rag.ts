@@ -211,7 +211,7 @@ export async function retrieveRelevantDocuments(
  * 生成智能面试分析提示词
  */
 export function generateIntelligentAnalysisPrompt(context: RAGContext): string {
-  const { relevantDocuments, userProfile } = context;
+  const { relevantDocuments } = context;
 
   const prompt = `# 智能面试官分析任务
 

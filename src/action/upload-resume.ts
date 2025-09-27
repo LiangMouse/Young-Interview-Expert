@@ -9,7 +9,7 @@ import { JsonOutputParser } from "@langchain/core/output_parsers";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { userProfileService } from "@/lib/user-profile-service";
 
-const zodSchema = z.object({
+const _zodSchema = z.object({
   nickname: z.string().optional().describe("Nickname"),
   email: z.string().optional().describe("Email address"),
   job_intention: z.string().optional().describe("Intended job position"),
@@ -59,7 +59,7 @@ const zodSchema = z.object({
     .describe("List of project experiences"),
 });
 
-export type ResumeData = z.infer<typeof zodSchema>;
+export type ResumeData = z.infer<typeof _zodSchema>;
 
 async function parsePdf(formData: FormData) {
   try {
@@ -211,7 +211,7 @@ export async function uploadResume(formData: FormData) {
     // 过滤掉undefined值
     const filteredData = Object.fromEntries(
       Object.entries(profileUpdateData).filter(
-        ([_, value]) => value !== undefined,
+        ([, value]) => value !== undefined,
       ),
     );
 

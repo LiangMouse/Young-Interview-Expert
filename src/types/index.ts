@@ -2,5 +2,4 @@
 
 export * from "./auth";
 export * from "./interview";
-export * from "./api";
 export * from "./common";

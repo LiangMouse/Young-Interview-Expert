@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { Server, Socket } from "socket.io";
 import { createServer } from "http";
 import { ClientToServerEvents, ServerToClientEvents } from "@/types/socket";
@@ -10,7 +10,7 @@ import {
 // 全局 Socket.io 实例
 let io: Server<ClientToServerEvents, ServerToClientEvents> | null = null;
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   if (!io) {
     console.log("Initializing Socket.io server...");
     const httpServer = createServer();
@@ -60,8 +60,6 @@ export async function GET(request: NextRequest) {
             const result = await processInterviewSpeech({
               transcript: data.transcript,
               interviewId: data.interviewId,
-              userId: data.userId,
-              conversationHistory,
             });
 
             if (result.success) {

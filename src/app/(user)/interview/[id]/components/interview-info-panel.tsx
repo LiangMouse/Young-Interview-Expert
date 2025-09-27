@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { RotateCcw, Pause, Loader2 } from "lucide-react";
+import { RotateCcw, Pause } from "lucide-react";
 
 interface InterviewInfoPanelProps {
   isLoading: boolean;
@@ -31,15 +31,15 @@ export function InterviewInfoPanel({
   isRecording,
 }: InterviewInfoPanelProps) {
   return (
-    <div className="w-80 flex flex-col">
+    <div className="w-60 flex flex-col">
       <Card className="backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl overflow-hidden">
         <CardContent className="p-6">
           <div className="text-center mb-4">
             <div className="relative inline-block">
               <Avatar className="w-24 h-24 mx-auto mb-3 ring-4 ring-sky-200/50">
                 <AvatarImage src="/placeholder.svg?height=96&width=96" />
-                <AvatarFallback className="bg-gradient-to-r from-sky-400 to-purple-400 text-white text-2xl">
-                  智
+                <AvatarFallback className="bg-gradient-to-r from-sky-400 to-purple-400 text-white text-6xl">
+                  🥸
                 </AvatarFallback>
               </Avatar>
               {isLoading && (

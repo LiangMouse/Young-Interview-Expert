@@ -20,7 +20,6 @@ export const useSocket = ({
 }: UseSocketProps) => {
   const [socket, setSocket] =
     useState<Socket<ServerToClientEvents, ClientToServerEvents>>();
-  const [lastAiResponse, setLastAiResponse] = useState("");
   const [isConnected, setIsConnected] = useState(false);
 
   // 保持回调的最新引用，避免因依赖变化导致重复初始化
@@ -59,7 +58,6 @@ export const useSocket = ({
 
     newSocket.on("ai-response", (data) => {
       console.log("AI Response:", data.text);
-      setLastAiResponse(data.text);
       onAiResponseRef.current?.(data.text);
     });
 
@@ -100,15 +98,6 @@ export const useSocket = ({
     [socket, interviewId, userId, isConnected],
   );
 
-  const startInterview = useCallback(() => {
-    if (socket && isConnected) {
-      socket.emit("start-interview", {
-        interviewId,
-        userId,
-      });
-    }
-  }, [socket, interviewId, userId, isConnected]);
-
   const stopTTS = useCallback(() => {
     if (socket && isConnected) {
       socket.emit("stop-tts", { interviewId });
@@ -118,9 +107,7 @@ export const useSocket = ({
   return {
     socket,
     sendUserSpeech,
-    startInterview,
     stopTTS,
-    lastAiResponse,
     isConnected,
   };
 };

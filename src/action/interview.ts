@@ -52,7 +52,7 @@ export async function addUserMessage(
 }
 
 /**
- * 添加AI消息到面试会话
+ * @description: 添加AI消息到数据库
  */
 export async function addAiMessage(
   interviewId: string,
@@ -152,17 +152,9 @@ export async function getInterviewWithMessages(interviewId: string): Promise<{
 export async function processInterviewSpeech({
   transcript,
   interviewId,
-  userId,
-  conversationHistory,
 }: {
   transcript: string;
   interviewId: string;
-  userId: string;
-  conversationHistory: Array<{
-    role: string;
-    content: string;
-    timestamp: Date;
-  }>;
 }) {
   try {
     // 保存用户消息

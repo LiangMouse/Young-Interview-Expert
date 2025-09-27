@@ -9,14 +9,11 @@ import {
   addAiMessage,
   getInterviewWithMessages,
 } from "@/action/interview";
-import {
-  mergeMessagesToConversation,
-  type MessageInput,
-} from "@/lib/chat-utils";
+import { mergeMessagesToConversation } from "@/lib/chat-utils";
 import { useSocket } from "@/hooks/useSocket";
 import { differenceInSeconds } from "date-fns";
-import { SYSTEM_PROMPT } from "@/lib/prompt/analytics";
 import { UserProfile } from "@/types/profile";
+import type { SimpleMessage } from "@/types/message";
 
 interface UseInterviewLogicProps {
   user: any;
@@ -40,15 +37,15 @@ export function useInterviewLogic({
   const [interactionCount, setInteractionCount] = useState(0);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
-  const userName = userProfile?.nickname || user?.email || "用户";
-
   // 加载历史消息
   const [historyMessages, setHistoryMessages] = useState<UIMessage[]>([]);
 
   useEffect(() => {
+    // 加载历史对话
     const loadHistory = async () => {
       try {
         const result = await getInterviewWithMessages(interview.id);
+        console.log("result", result);
         if (result.success && result.interview) {
           const { user_messages, ai_messages } = result.interview;
 
@@ -58,7 +55,7 @@ export function useInterviewLogic({
               user_messages,
               ai_messages,
             );
-
+            console.log("conversation", conversation);
             // 转换为 UIMessage 格式
             const uiMessages: UIMessage[] = conversation.map((msg) => ({
               id: msg.id,
@@ -70,6 +67,7 @@ export function useInterviewLogic({
                 },
               ],
             }));
+            console.log("uiMessages", uiMessages);
             setHistoryMessages(uiMessages);
           }
         }
@@ -89,6 +87,7 @@ export function useInterviewLogic({
     if (historyMessages.length > 0) {
       return historyMessages;
     } else {
+      console.log("没有历史消息，返回空数组");
       // 返回空数组，让AI根据用户档案动态生成个性化开场白
       // 这样AI会基于用户背景、求职意向等信息生成更智能的开场
       return [];
@@ -104,41 +103,32 @@ export function useInterviewLogic({
     onFinish: async (options) => {
       setInteractionCount((prev) => prev + 1);
 
-      // 获取 AI 响应消息
+      // 获取消息
       const aiMessage = options.message;
+      const allMessages = options.messages || [];
+      const lastUserMessage = allMessages
+        .filter((msg: any) => msg.role === "user")
+        .pop();
 
-      // 同时保存用户消息和 AI 消息到数据库
+      // 保存消息到数据库
       try {
-        // 保存用户消息（使用存储的待保存消息）
+        // 保存用户消息
+        await saveUserMessage(lastUserMessage);
+
+        // 保存AI消息
+        await saveAiMessage(aiMessage);
+
+        // 清除待保存消息状态
         if (pendingUserMessage) {
-          await addUserMessage(interview.id, pendingUserMessage);
-          setPendingUserMessage(null); // 清除待保存消息
-        }
-
-        // 保存 AI 响应
-        if (aiMessage && aiMessage.role === "assistant") {
-          let aiContent = "";
-
-          // 根据 AI SDK 5.0 官方文档，从 parts 中提取文本内容
-          if (aiMessage.parts && aiMessage.parts.length > 0) {
-            aiContent = aiMessage.parts
-              .filter((part: any) => part.type === "text")
-              .map((part: any) => part.text)
-              .join("");
-          }
-
-          if (aiContent) {
-            await addAiMessage(interview.id, aiContent);
-          }
+          setPendingUserMessage(null);
         }
       } catch (error) {
         console.error(`❌ [Hook] 保存消息到数据库失败:`, error);
-        // 如果保存失败，清除待保存消息
         setPendingUserMessage(null);
       }
     },
     onError: (error) => {
-      console.error("Interview chat error:", error);
+      console.error("❌ Interview chat error:", error);
     },
   });
 
@@ -147,7 +137,56 @@ export function useInterviewLogic({
     interviewChat;
   const isLoading = status === "streaming" || status === "submitted";
 
-  // 自动触发自我介绍开场（仅在首次进入且无历史消息时）
+  // 自己管理 input 状态，因为 AI SDK 5.0+ 不直接提供
+  const [input, setInput] = useState("");
+
+  // 存储待保存的用户消息
+  const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(
+    null,
+  );
+
+  // 提取消息内容
+  const extractMessageContent = (message: any): string => {
+    if (message.content) {
+      return message.content;
+    } else if (message.parts && message.parts.length > 0) {
+      return message.parts
+        .filter((part: any) => part.type === "text")
+        .map((part: any) => part.text)
+        .join("");
+    }
+    return "";
+  };
+
+  // 保存用户消息到数据库
+  const saveUserMessage = async (lastUserMessage: any) => {
+    if (!lastUserMessage) {
+      console.log(" 未找到用户消息，跳过保存");
+      return;
+    }
+
+    const userContent = extractMessageContent(lastUserMessage);
+    if (userContent) {
+      console.log("保存用户消息:", userContent);
+      await addUserMessage(interview.id, userContent);
+    } else {
+      console.log("无法提取用户消息内容，跳过保存");
+    }
+  };
+
+  // 保存AI消息到数据库
+  const saveAiMessage = async (aiMessage: any) => {
+    if (!aiMessage || aiMessage.role !== "assistant") {
+      return;
+    }
+
+    const aiContent = extractMessageContent(aiMessage);
+    if (aiContent) {
+      await addAiMessage(interview.id, aiContent);
+    }
+  };
+
+  // AI主动开场：当没有历史消息时，触发AI生成开场白
   useEffect(() => {
     if (
       !isLoadingHistory &&
@@ -156,14 +195,18 @@ export function useInterviewLogic({
       user?.id &&
       userProfile
     ) {
-      // 发送一个触发词让AI执行“仅请求自我介绍”的开场
+      // 让AI主动开始面试，不需要用户输入任何内容
+      // 设置待保存消息为INIT_INTERVIEW，但这个消息不会被保存到数据库
+      setPendingUserMessage("INIT_INTERVIEW");
+
+      // 发送一个特殊的初始化请求
       sendMessage(
         {
-          role: "user",
+          role: "system",
           parts: [
             {
               type: "text",
-              text: "你好，我想开始面试",
+              text: "INIT_INTERVIEW", // 特殊标识，让后端知道这是面试初始化
             },
           ],
         },
@@ -182,19 +225,12 @@ export function useInterviewLogic({
     user?.id,
     userProfile,
     sendMessage,
+    setPendingUserMessage,
   ]);
-
-  // 自己管理 input 状态，因为 AI SDK 5.0+ 不直接提供
-  const [input, setInput] = useState("");
-
-  // 存储待保存的用户消息
-  const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(
-    null,
-  );
 
   // 适配 @ai-sdk/react 的 append 方法
   const append = useCallback(
-    (message: MessageInput) => {
+    (message: SimpleMessage) => {
       try {
         sendMessage({
           role: message.role,
@@ -236,13 +272,7 @@ export function useInterviewLogic({
     console.error("Socket error:", error);
   }, []);
 
-  const {
-    sendUserSpeech,
-    startInterview,
-    stopTTS,
-    lastAiResponse,
-    isConnected,
-  } = useSocket({
+  const { sendUserSpeech, stopTTS, isConnected } = useSocket({
     interviewId: interview.id,
     userId: user.id,
     onAiResponse,
@@ -282,23 +312,20 @@ export function useInterviewLogic({
   });
 
   // 直接向聊天里添加一条消息（不触发输入框逻辑）
-  const addMessage = useMemoizedFn(
-    async (message: { role: "user" | "assistant"; content: string }) => {
-      // 保存消息到数据库
-      try {
-        if (message.role === "user") {
-          await addUserMessage(interview.id, message.content);
-        } else if (message.role === "assistant") {
-          await addAiMessage(interview.id, message.content);
-        }
-        console.log(`${message.role} message saved to database`);
-      } catch (error) {
-        console.error(`Failed to save ${message.role} message:`, error);
+  const addMessage = useMemoizedFn(async (message: SimpleMessage) => {
+    // 保存消息到数据库
+    try {
+      if (message.role === "user") {
+        await addUserMessage(interview.id, message.content);
+      } else if (message.role === "assistant") {
+        await addAiMessage(interview.id, message.content);
       }
+    } catch (error) {
+      console.error(`Failed to save ${message.role} message:`, error);
+    }
 
-      append(message);
-    },
-  );
+    append(message);
+  });
 
   const toggleRecording = useMemoizedFn(() => {
     if (!isVoiceMode) {
@@ -374,28 +401,4 @@ export function useInterviewLogic({
     // Chat helpers
     addMessage,
   };
-}
-
-function createSystemPrompt(
-  jobTitle?: string,
-  userProfile?: UserProfile | null,
-) {
-  let prompt = SYSTEM_PROMPT;
-  if (jobTitle) {
-    prompt += `\n\n候选人正在申请 ${jobTitle} 岗位。`;
-  }
-  if (userProfile) {
-    prompt += `\n\n这是候选人的简历信息: ${JSON.stringify(
-      {
-        job_intention: userProfile.job_intention,
-        skills: userProfile.skills,
-        experience_years: userProfile.experience_years,
-        work_experiences: userProfile.work_experiences,
-        project_experiences: userProfile.project_experiences,
-      },
-      null,
-      2,
-    )}`;
-  }
-  return prompt;
 }

@@ -172,7 +172,6 @@ function generateInterviewFocusAreas(
   userProfile: UserProfile,
 ): PersonalizedInterviewContext["interviewFocusAreas"] {
   const technicalSkills = userProfile.skills || [];
-  const jobIntention = userProfile.job_intention || "";
 
   // 基于求职意向生成行为问题
   const behavioralQuestions = generateBehavioralQuestions(userProfile);
@@ -364,7 +363,6 @@ function generateBehavioralQuestions(userProfile: UserProfile): string[] {
 function generateIndustryQuestions(userProfile: UserProfile): string[] {
   const questions = [];
   const jobIntention = userProfile.job_intention?.toLowerCase() || "";
-  const companyIntention = userProfile.company_intention?.toLowerCase() || "";
 
   if (jobIntention.includes("前端") || jobIntention.includes("frontend")) {
     questions.push("前端性能优化");
@@ -417,7 +415,7 @@ export function generatePersonalizedInterviewPrompt(
     basicInfo,
     workExperienceSummary,
     projectExperienceSummary,
-    interviewFocusAreas,
+    interviewFocusAreas: _interviewFocusAreas,
   } = context;
 
   let prompt = `你是一位资深的AI面试官，正在面试一位候选人。以下是候选人的详细背景信息，请基于这些信息进行个性化的面试：
@@ -464,18 +462,7 @@ export function generatePersonalizedInterviewPrompt(
 - 技术深度：${projectExperienceSummary.technicalDepth}
 ${projectExperienceSummary.leadershipRoles.length > 0 ? `- 领导角色：${projectExperienceSummary.leadershipRoles.join(", ")}` : ""}
 
-## 面试重点方向
-### 技术技能重点
-${interviewFocusAreas.technicalSkills.map((skill) => `- ${skill}`).join("\n")}
 
-### 行为面试重点
-${interviewFocusAreas.behavioralQuestions.map((q) => `- ${q}`).join("\n")}
-
-### 行业特定问题
-${interviewFocusAreas.industrySpecificQuestions.map((q) => `- ${q}`).join("\n")}
-
-### 职业规划问题
-${interviewFocusAreas.careerGoalQuestions.map((q) => `- ${q}`).join("\n")}
 
 ## 面试指导原则
 1. **个性化提问**：基于候选人的具体经历和技能进行针对性提问
@@ -484,7 +471,7 @@ ${interviewFocusAreas.careerGoalQuestions.map((q) => `- ${q}`).join("\n")}
 4. **职业匹配**：评估候选人与目标职位的匹配度
 5. **发展潜力**：了解候选人的学习能力和发展潜力
 
-请开始面试，首先进行简单的自我介绍引导，然后根据候选人的回答逐步深入。记住要保持专业、友好的态度，并根据候选人的具体情况调整问题的难度和方向。`;
+在候选人自我介绍后，根据候选人的回答逐步深入。记住要保持专业、友好的态度，并根据候选人的具体情况调整问题的难度和方向。`;
 
   return prompt;
 }

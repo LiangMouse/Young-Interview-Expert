@@ -15,7 +15,6 @@ import {
   generateIntelligentAnalysisPrompt,
 } from "@/lib/vector-rag";
 import {
-  BASE_INTERVIEWER_PROMPT,
   CONVERSATION_HISTORY_GUIDANCE,
   FALLBACK_PROMPT,
   SELF_INTRO_OPENING_ONLY,
@@ -81,22 +80,24 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (!profileError && userProfile) {
-          // 生成个性化面试提示词
-          const personalizedContext = extractPersonalizedContext(userProfile);
-          systemPrompt =
-            generatePersonalizedInterviewPrompt(personalizedContext);
+          // 检测面试初始化信号
+          const isInitSignal =
+            messages.length === 1 &&
+            messages[0].role === "system" &&
+            messages[0].content === "INIT_INTERVIEW";
 
-          // 添加对话历史管理指导
-          systemPrompt += CONVERSATION_HISTORY_GUIDANCE;
-
-          // 如果是首次对话（无消息或仅有一条用户触发），让AI面试官主动开始
-          if (
-            messages.length === 0 ||
-            (messages.length === 1 && messages[0].role === "user")
-          ) {
-            // 仅请求自我介绍的开场
-            systemPrompt += SELF_INTRO_OPENING_ONLY;
+          if (messages.length === 0 || isInitSignal) {
+            // 面试初始化阶段：使用简洁的通用提示词，不包含个性化信息
+            systemPrompt = "你是一位专业的面试官。" + SELF_INTRO_OPENING_ONLY;
           } else {
+            // 正常对话阶段：使用个性化面试提示词
+            const personalizedContext = extractPersonalizedContext(userProfile);
+            systemPrompt =
+              generatePersonalizedInterviewPrompt(personalizedContext);
+
+            // 添加对话历史管理指导
+            systemPrompt += CONVERSATION_HISTORY_GUIDANCE;
+
             // 非首次对话，添加对话历史指导
             systemPrompt += "\n\n## 对话历史指导\n";
             systemPrompt +=
@@ -153,9 +154,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. 构建消息数组，添加系统提示词
+    // 过滤掉INIT_INTERVIEW初始化信号，避免发送给AI
+    const filteredMessages = messages.filter(
+      (msg) => !(msg.role === "system" && msg.content === "INIT_INTERVIEW"),
+    );
+
     const messagesWithSystem = [
       { role: "system", content: systemPrompt },
-      ...messages,
+      ...filteredMessages,
     ];
 
     // 5. 转换 UIMessage 格式为 Core Messages 格式
@@ -226,7 +232,7 @@ export async function POST(request: NextRequest) {
 }
 
 // 处理 OPTIONS 请求（CORS 预检）
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {

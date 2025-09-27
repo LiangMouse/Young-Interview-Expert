@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat as useAIChat } from "@ai-sdk/react";
+import { useEffect } from "react";
 import type { UIMessage } from "@ai-sdk/react";
 
 interface UsePersonalizedChatOptions {
@@ -26,6 +27,13 @@ export function usePersonalizedChat({
     onFinish,
     onError,
   });
+
+  // 当历史消息变化时，直接设置到 useChat
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      chat.setMessages(messages);
+    }
+  }, [messages, chat.setMessages]);
 
   // 重写 sendMessage 方法，自动添加 body 参数
   const originalSendMessage = chat.sendMessage;

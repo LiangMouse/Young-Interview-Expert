@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { InterviewClientProps } from "@/lib/types/interview";
 import { VoiceModeDialog } from "./components/voice-mode-dialog";
 import { PageHeader } from "./components/page-header";
@@ -8,6 +8,7 @@ import { InterviewInfoPanel } from "./components/interview-info-panel";
 import { useVoiceFeatures } from "./hooks/useVoiceFeatures";
 import { useInterviewLogic } from "./hooks/useInterviewLogic";
 import { ChatInterface } from "./components/chat-interface";
+import type { SimpleMessage } from "@/types/message";
 
 export default function InterviewClient({
   user,
@@ -34,10 +35,7 @@ export default function InterviewClient({
       // 转交到面试逻辑发送
       interviewLogic.sendUserSpeech(transcript);
     },
-    onAppendMessage: (message: {
-      role: "user" | "assistant";
-      content: string;
-    }) => {
+    onAppendMessage: (message: SimpleMessage) => {
       // 转交到面试逻辑添加
       interviewLogic.addMessage(message);
     },
@@ -87,17 +85,20 @@ export default function InterviewClient({
       />
 
       <div className="flex min-h-[calc(100vh-80px)] max-w-7xl mx-auto p-4 gap-4">
-        <InterviewInfoPanel
-          isLoading={interviewLogic.isLoading}
-          isVoiceMode={isVoiceMode}
-          isListening={voiceFeatures.isListening}
-          isSpeaking={voiceFeatures.isSpeaking}
-          elapsedTime={interviewLogic.elapsedTime}
-          interactionCount={interviewLogic.interactionCount}
-          onRestart={interviewLogic.handleRestart}
-          onStop={interviewLogic.handleStop}
-          isRecording={interviewLogic.isRecording}
-        />
+        {/* Sticky Interview Info Panel */}
+        <div className="sticky top-1 self-start">
+          <InterviewInfoPanel
+            isLoading={interviewLogic.isLoading}
+            isVoiceMode={isVoiceMode}
+            isListening={voiceFeatures.isListening}
+            isSpeaking={voiceFeatures.isSpeaking}
+            elapsedTime={interviewLogic.elapsedTime}
+            interactionCount={interviewLogic.interactionCount}
+            onRestart={interviewLogic.handleRestart}
+            onStop={interviewLogic.handleStop}
+            isRecording={interviewLogic.isRecording}
+          />
+        </div>
 
         <ChatInterface
           ref={messagesEndRef}

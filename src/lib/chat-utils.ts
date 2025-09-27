@@ -9,11 +9,8 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-// 消息发送接口
-export interface MessageInput {
-  role: "user" | "assistant";
-  content: string;
-}
+// 导入公共类型
+import type { MessageRole } from "@/types/message";
 
 /**
  * 将 UIMessage 格式转换为 Core Messages 格式（用于 @ai-sdk/deepseek）
@@ -71,13 +68,13 @@ export function mergeMessagesToConversation(
   userMessages: ChatMessage[],
   aiMessages: ChatMessage[],
 ): Array<{
-  role: "user" | "assistant";
+  role: MessageRole;
   content: string;
   id: string;
   timestamp: string;
 }> {
   const conversation: Array<{
-    role: "user" | "assistant";
+    role: MessageRole;
     content: string;
     id: string;
     timestamp: string;

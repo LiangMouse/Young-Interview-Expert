@@ -110,7 +110,7 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
       <div className="flex-1 flex flex-col">
         <Card className="flex-1 backdrop-blur-md bg-white/60 border-white/30 shadow-xl rounded-3xl overflow-hidden flex flex-col">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-gray-800">对话交流</CardTitle>
+            <CardTitle className="text-lg text-gray-800">Chat</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
             <div className="flex-1 px-6 overflow-auto">
