@@ -38,6 +38,7 @@ export function useSpeechRecognition({
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const finalTranscriptRef = useRef("");
+  const autoRestartRef = useRef(false);
 
   // 检查浏览器支持
   useEffect(() => {
@@ -88,8 +89,16 @@ export function useSpeechRecognition({
 
       // 处理错误
       recognition.onerror = (event) => {
+        // 对于无语音输入/不匹配，不作为错误处理，保持等待
+        if (
+          event.error === "no-speech" ||
+          (event as any).error === "no-match"
+        ) {
+          return;
+        }
         const errorMessage = getErrorMessage(event.error);
         setError(errorMessage);
+        autoRestartRef.current = false;
         setIsListening(false);
         onError?.(errorMessage);
         console.error("语音识别错误:", event.error);
@@ -103,12 +112,19 @@ export function useSpeechRecognition({
 
       // 处理结束
       recognition.onend = () => {
+        // 静默等自然结束时，如果开启自动重启，则继续监听
+        if (autoRestartRef.current) {
+          try {
+            recognition.start();
+            return;
+          } catch {}
+        }
         setIsListening(false);
       };
 
       // 处理无语音输入
       recognition.onnomatch = () => {
-        setError("未检测到语音输入");
+        // 不作为错误处理，保持等待
       };
 
       // 处理无语音服务
@@ -131,6 +147,7 @@ export function useSpeechRecognition({
 
     try {
       setError(null);
+      autoRestartRef.current = true;
       recognitionRef.current.start();
     } catch (err) {
       setError("启动语音识别失败");
@@ -141,6 +158,7 @@ export function useSpeechRecognition({
   // 停止语音识别
   const stopListening = useCallback(() => {
     if (recognitionRef.current && isListening) {
+      autoRestartRef.current = false;
       recognitionRef.current.stop();
     }
   }, [isListening]);

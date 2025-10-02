@@ -258,14 +258,16 @@ ${doc.content}
 
 ## 输出要求
 
+**重要：生成的问题必须是单个问题，不能是问题列表！**
+
 请以JSON格式输出分析结果，包含：
 - candidateAnalysis: 候选人分析
-- interviewStrategy: 面试策略
-- keyQuestions: 关键问题列表
+- interviewStrategy: 面试策略  
+- nextQuestion: 下一个最重要的单个问题（不是问题列表）
 - riskPoints: 需要注意的风险点
-- openingQuestion: 个性化开场问题
+- questionRationale: 为什么选择这个问题的理由
 
-请确保分析深入、具体，避免通用化的建议。`;
+请确保分析深入、具体，避免通用化的建议。生成的问题应该是一个完整的单个问题，而不是多个问题的组合。`;
 
   return prompt;
 }

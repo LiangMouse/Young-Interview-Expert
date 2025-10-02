@@ -23,6 +23,9 @@ importers:
       '@langchain/openai':
         specifier: ^0.6.11
         version: 0.6.13(@langchain/core@0.3.77(@opentelemetry/api@1.9.0)(openai@5.12.2(ws@8.18.3)(zod@4.1.11)))(ws@8.18.3)
+      '@lottiefiles/dotlottie-react':
+        specifier: ^0.17.3
+        version: 0.17.3(react@19.1.1)
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.1.9(@types/react@19.1.13))(@types/react@19.1.13)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -98,6 +101,9 @@ importers:
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
+      lottie-react:
+        specifier: ^2.4.1
+        version: 2.4.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       lucide-react:
         specifier: ^0.525.0
         version: 0.525.0(react@19.1.1)
@@ -152,6 +158,9 @@ importers:
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
+      wavesurfer.js:
+        specifier: ^7.11.0
+        version: 7.11.0
       zod:
         specifier: ^4.1.8
         version: 4.1.11
@@ -1009,6 +1018,14 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       '@langchain/core': '>=0.2.21 <0.4.0'
+
+  '@lottiefiles/dotlottie-react@0.17.3':
+    resolution: {integrity: sha512-4PeJxXgnjg9JT5V8Qd/+0x9zC0K4iUNEXbucaiQoxTyx/rITYAvzP5JNYD0rhTMyn6edvtdBG6DPm0WOnEiatg==}
+    peerDependencies:
+      react: ^17 || ^18 || ^19
+
+  '@lottiefiles/dotlottie-web@0.53.1':
+    resolution: {integrity: sha512-UDm4ANdeO+Vq47c6idU7x4kQAX2AohF6ynRvmsGnT2GRXYpTa7p4VZYmesvhWqahEWUD7qZq6hPy2CXna8wt9g==}
 
   '@napi-rs/wasm-runtime@0.2.12':
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
@@ -3344,6 +3361,15 @@ packages:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
 
+  lottie-react@2.4.1:
+    resolution: {integrity: sha512-LQrH7jlkigIIv++wIyrOYFLHSKQpEY4zehPicL9bQsrt1rnoKRYCYgpCUe5maqylNtacy58/sQDZTkwMcTRxZw==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  lottie-web@5.13.0:
+    resolution: {integrity: sha512-+gfBXl6sxXMPe8tKQm7qzLnUy5DUPJPKIyRHwtpCpyUEYjHYRJC/5gjUvdkuO2c3JllrPtHXH5UJJK8LRYl5yQ==}
+
   lucide-react@0.525.0:
     resolution: {integrity: sha512-Tm1txJ2OkymCGkvwoHt33Y2JpN5xucVq1slHcgE6Lk0WjDfjgKWor5CdVER8U6DvcfMwh4M8XxmpTiyzfmfDYQ==}
     peerDependencies:
@@ -4429,6 +4455,9 @@ packages:
   vfile@6.0.3:
     resolution: {integrity: sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q==}
 
+  wavesurfer.js@7.11.0:
+    resolution: {integrity: sha512-LOGdIBIKv/roYuQYClhoqhwbIdQL1GfobLnS2vx0heoLD9lu57OUHWE2DIsCNXBvCsmmbkUvJq9W8bPLPbikGw==}
+
   weaviate-client@3.8.1:
     resolution: {integrity: sha512-/bH5SO31gGGiI5RhvOEwQBs2DtORsssVjenWxdOQzGToAdmqRC4Oo9HZLIITX5BdFD0IqKDnY81nOZlJlHzn+g==}
     engines: {node: '>=18.0.0'}
@@ -5093,6 +5122,13 @@ snapshots:
       weaviate-client: 3.8.1
     transitivePeerDependencies:
       - encoding
+
+  '@lottiefiles/dotlottie-react@0.17.3(react@19.1.1)':
+    dependencies:
+      '@lottiefiles/dotlottie-web': 0.53.1
+      react: 19.1.1
+
+  '@lottiefiles/dotlottie-web@0.53.1': {}
 
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:
@@ -7476,6 +7512,14 @@ snapshots:
     dependencies:
       js-tokens: 4.0.0
 
+  lottie-react@2.4.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+    dependencies:
+      lottie-web: 5.13.0
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
+
+  lottie-web@5.13.0: {}
+
   lucide-react@0.525.0(react@19.1.1):
     dependencies:
       react: 19.1.1
@@ -8821,6 +8865,8 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
+
+  wavesurfer.js@7.11.0: {}
 
   weaviate-client@3.8.1:
     dependencies:

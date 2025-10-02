@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useMemoizedFn, useInterval } from "ahooks";
 import { usePersonalizedChat } from "@/hooks/usePersonalizedChat";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import type { UIMessage } from "@ai-sdk/react";
 import {
   addUserMessage,
@@ -37,6 +38,11 @@ export function useInterviewLogic({
   const [interactionCount, setInteractionCount] = useState(0);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
+  // 语音转文字状态
+  const [isSTTRecording, setIsSTTRecording] = useState(false);
+  const [sttTranscript, setSttTranscript] = useState("");
+  const [sttError, setSttError] = useState<string | null>(null);
+
   // 加载历史消息
   const [historyMessages, setHistoryMessages] = useState<UIMessage[]>([]);
 
@@ -56,7 +62,7 @@ export function useInterviewLogic({
               ai_messages,
             );
             console.log("conversation", conversation);
-            // 转换为 UIMessage 格式
+            // 转换为 UIMessage 格式，保留时间戳
             const uiMessages: UIMessage[] = conversation.map((msg) => ({
               id: msg.id,
               role: msg.role as "user" | "assistant",
@@ -66,6 +72,7 @@ export function useInterviewLogic({
                   text: msg.content,
                 },
               ],
+              timestamp: msg.timestamp, // 添加时间戳
             }));
             console.log("uiMessages", uiMessages);
             setHistoryMessages(uiMessages);
@@ -94,6 +101,29 @@ export function useInterviewLogic({
     }
   }, [historyMessages]);
 
+  // 语音转文字 hook
+  const {
+    isListening: isSTTListening,
+    transcript: sttTranscriptResult,
+    interimTranscript: sttInterimTranscript,
+    startListening: startSTTListening,
+    stopListening: stopSTTListening,
+    resetTranscript: resetSTTTranscript,
+    isSupported: isSTTSupported,
+    error: sttErrorResult,
+  } = useSpeechRecognition({
+    onResult: (transcript) => {
+      setSttTranscript(transcript);
+    },
+    onError: (error) => {
+      setSttError(error);
+      setIsSTTRecording(false);
+    },
+    continuous: false,
+    interimResults: true,
+    language: "zh-CN",
+  });
+
   // 使用自定义的个性化聊天hook
   const interviewChat = usePersonalizedChat({
     id: `interview-${interview.id}`,
@@ -109,6 +139,15 @@ export function useInterviewLogic({
       const lastUserMessage = allMessages
         .filter((msg: any) => msg.role === "user")
         .pop();
+
+      // 为消息添加时间戳
+      const currentTime = new Date().toISOString();
+      if (lastUserMessage && !lastUserMessage.timestamp) {
+        lastUserMessage.timestamp = currentTime;
+      }
+      if (aiMessage && !aiMessage.timestamp) {
+        aiMessage.timestamp = currentTime;
+      }
 
       // 保存消息到数据库
       try {
@@ -327,6 +366,25 @@ export function useInterviewLogic({
     append(message);
   });
 
+  // 语音转文字切换函数
+  const toggleSTTRecording = useMemoizedFn(() => {
+    if (isSTTRecording) {
+      stopSTTListening();
+      // 结束一次会话后，清空转录，避免下一次会话首帧出现旧内容
+      resetSTTTranscript();
+      setSttTranscript("");
+      setSttError(null);
+      setIsSTTRecording(false);
+    } else {
+      // 开始前清空旧数据
+      resetSTTTranscript();
+      setSttTranscript("");
+      setSttError(null);
+      startSTTListening();
+      setIsSTTRecording(true);
+    }
+  });
+
   const toggleRecording = useMemoizedFn(() => {
     if (!isVoiceMode) {
       setIsVoiceModeDialogOpen(true);
@@ -383,11 +441,19 @@ export function useInterviewLogic({
     error,
     isConnected,
 
+    // 语音转文字状态
+    isSTTRecording,
+    sttTranscript,
+    sttInterimTranscript,
+    sttError,
+    isSTTSupported,
+
     // Actions
     handleSendMessage,
     handleRestart,
     reload,
     toggleRecording,
+    toggleSTTRecording,
     handleConfirmVoiceMode,
     handleStopTTS,
     handleStop,

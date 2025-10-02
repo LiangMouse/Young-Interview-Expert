@@ -24,7 +24,13 @@ export function usePersonalizedChat({
   const chat = useAIChat({
     id,
     messages,
-    onFinish,
+    onFinish: (options) => {
+      // 为新消息添加时间戳
+      if (options.message && !(options.message as any).timestamp) {
+        (options.message as any).timestamp = new Date().toISOString();
+      }
+      onFinish?.(options);
+    },
     onError,
   });
 

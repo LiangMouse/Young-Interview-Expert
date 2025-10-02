@@ -6,8 +6,14 @@ import { format } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import type { UIMessage } from "@ai-sdk/react";
 // TODO 考虑抽出一个可独立发包的组件
+
+// 扩展 UIMessage 类型以包含时间戳
+interface ExtendedUIMessage extends UIMessage {
+  timestamp?: string;
+}
+
 interface MessageItemProps {
-  message: UIMessage;
+  message: ExtendedUIMessage;
   index: number;
 }
 
@@ -28,7 +34,7 @@ export const MessageItem = memo(({ message }: MessageItemProps) => {
       <div
         className={`max-w-[70%] p-4 rounded-3xl overflow-hidden ${
           message.role === "user"
-            ? "bg-gradient-to-r from-sky-400 to-purple-400 text-white"
+            ? "bg-[rgba(233,233,233,0.5)] text-gray-900"
             : "bg-white/80 text-gray-800 border border-white/50"
         }`}
       >
@@ -47,21 +53,39 @@ export const MessageItem = memo(({ message }: MessageItemProps) => {
             </motion.span>
           )}
           {/* 如果有多处类似场景下多处使用ReactMD组件，考虑抽出 */}
-          <div className="prose prose-sm max-w-none prose-gray prose-headings:text-gray-900 prose-strong:text-gray-900 prose-em:text-gray-700 prose-code:text-gray-800 prose-pre:bg-gray-50 prose-blockquote:border-gray-300 prose-blockquote:text-gray-600">
+          <div
+            className={`prose prose-sm max-w-none ${
+              message.role === "user"
+                ? "prose-invert prose-headings:text-white prose-strong:text-white prose-em:text-white/90 prose-code:text-white prose-pre:bg-white/20 prose-blockquote:border-white/30 prose-blockquote:text-white/90"
+                : "prose-gray prose-headings:text-gray-900 prose-strong:text-gray-900 prose-em:text-gray-700 prose-code:text-gray-800 prose-pre:bg-gray-50 prose-blockquote:border-gray-300 prose-blockquote:text-gray-600"
+            }`}
+          >
             <ReactMarkdown
               components={{
                 p: ({ children }) => (
-                  <p className="mb-2 last:mb-0 text-sm leading-relaxed">
+                  <p className={`mb-2 last:mb-0 text-sm leading-relaxed`}>
                     {children}
                   </p>
                 ),
                 strong: ({ children }) => (
-                  <strong className="font-semibold text-gray-900">
+                  <strong
+                    className={`font-semibold ${
+                      message.role === "user" ? "text-white" : "text-gray-900"
+                    }`}
+                  >
                     {children}
                   </strong>
                 ),
                 em: ({ children }) => (
-                  <em className="italic text-gray-700">{children}</em>
+                  <em
+                    className={`italic ${
+                      message.role === "user"
+                        ? "text-white/90"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    {children}
+                  </em>
                 ),
                 ul: ({ children }) => (
                   <ul className="list-disc list-inside space-y-1 my-2 ml-2">
@@ -74,25 +98,49 @@ export const MessageItem = memo(({ message }: MessageItemProps) => {
                   </ol>
                 ),
                 li: ({ children }) => (
-                  <li className="text-sm leading-relaxed">{children}</li>
+                  <li
+                    className={`text-sm leading-relaxed ${
+                      message.role === "user" ? "text-white" : ""
+                    }`}
+                  >
+                    {children}
+                  </li>
                 ),
                 h1: ({ children }) => (
-                  <h1 className="text-lg font-bold text-gray-900 mb-2 mt-3 first:mt-0">
+                  <h1
+                    className={`text-lg font-bold mb-2 mt-3 first:mt-0 ${
+                      message.role === "user" ? "text-white" : "text-gray-900"
+                    }`}
+                  >
                     {children}
                   </h1>
                 ),
                 h2: ({ children }) => (
-                  <h2 className="text-base font-bold text-gray-900 mb-2 mt-3 first:mt-0">
+                  <h2
+                    className={`text-base font-bold mb-2 mt-3 first:mt-0 ${
+                      message.role === "user" ? "text-white" : "text-gray-900"
+                    }`}
+                  >
                     {children}
                   </h2>
                 ),
                 h3: ({ children }) => (
-                  <h3 className="text-sm font-bold text-gray-900 mb-1 mt-2 first:mt-0">
+                  <h3
+                    className={`text-sm font-bold mb-1 mt-2 first:mt-0 ${
+                      message.role === "user" ? "text-white" : "text-gray-900"
+                    }`}
+                  >
                     {children}
                   </h3>
                 ),
                 blockquote: ({ children }) => (
-                  <blockquote className="border-l-4 border-gray-300 pl-4 my-2 italic text-gray-600 bg-gray-50/50 py-2 rounded-r">
+                  <blockquote
+                    className={`border-l-4 pl-4 my-2 italic py-2 rounded-r ${
+                      message.role === "user"
+                        ? "border-white/30 text-white/90 bg-white/10"
+                        : "border-gray-300 text-gray-600 bg-gray-50/50"
+                    }`}
+                  >
                     {children}
                   </blockquote>
                 ),
@@ -100,19 +148,37 @@ export const MessageItem = memo(({ message }: MessageItemProps) => {
                   const isInline = !className;
                   if (isInline) {
                     return (
-                      <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono text-gray-800">
+                      <code
+                        className={`px-1.5 py-0.5 rounded text-xs font-mono ${
+                          message.role === "user"
+                            ? "bg-white/20 text-white"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
                         {children}
                       </code>
                     );
                   }
                   return (
-                    <code className="block bg-gray-100 p-3 rounded text-xs font-mono overflow-x-auto text-gray-800 my-2">
+                    <code
+                      className={`block p-3 rounded text-xs font-mono overflow-x-auto my-2 ${
+                        message.role === "user"
+                          ? "bg-white/20 text-white"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
                       {children}
                     </code>
                   );
                 },
                 pre: ({ children }) => (
-                  <pre className="bg-gray-100 p-3 rounded overflow-x-auto my-2 text-xs">
+                  <pre
+                    className={`p-3 rounded overflow-x-auto my-2 text-xs ${
+                      message.role === "user"
+                        ? "bg-white/20 text-white"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
                     {children}
                   </pre>
                 ),
@@ -127,10 +193,12 @@ export const MessageItem = memo(({ message }: MessageItemProps) => {
         </motion.div>
         <p
           className={`text-xs mt-2 ${
-            message.role === "user" ? "text-white/70" : "text-gray-500"
+            message.role === "user" ? "text-gray-500" : "text-gray-500"
           }`}
         >
-          {format(new Date(), "HH:mm")}
+          {message.timestamp
+            ? format(new Date(message.timestamp), "HH:mm")
+            : format(new Date(), "HH:mm")}
         </p>
       </div>
     </motion.div>

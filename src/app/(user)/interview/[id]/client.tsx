@@ -113,12 +113,15 @@ export default function InterviewClient({
           isSpeaking={voiceFeatures.isSpeaking}
           isRecording={interviewLogic.isRecording}
           isListening={voiceFeatures.isListening}
-          sttError={voiceFeatures.sttError}
-          ttsError={voiceFeatures.ttsError}
-          interimTranscript={voiceFeatures.interimTranscript}
           onVoiceModeToggle={handleVoiceModeToggle}
-          onStopTTS={handleStopTTS}
           onToggleRecording={handleToggleRecording}
+          // 语音转文字相关
+          isSTTRecording={interviewLogic.isSTTRecording}
+          sttTranscript={interviewLogic.sttTranscript}
+          sttInterimTranscript={interviewLogic.sttInterimTranscript}
+          sttError={interviewLogic.sttError}
+          isSTTSupported={interviewLogic.isSTTSupported}
+          onToggleSTTRecording={interviewLogic.toggleSTTRecording}
         />
       </div>
 

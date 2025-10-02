@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   extractPersonalizedContext,
   generatePersonalizedInterviewPrompt,
+  generateSimpleInterviewPrompt,
 } from "@/lib/profile-rag";
 import {
   retrieveRelevantDocuments,
@@ -17,7 +18,8 @@ import {
 import {
   CONVERSATION_HISTORY_GUIDANCE,
   FALLBACK_PROMPT,
-  SELF_INTRO_OPENING_ONLY,
+  SINGLE_QUESTION_GUIDANCE,
+  SINGLE_QUESTION_CONSTRAINT,
 } from "@/lib/prompt";
 /**
  * 处理聊天消息的 POST 请求
@@ -80,28 +82,35 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (!profileError && userProfile) {
-          // 检测面试初始化信号
-          const isInitSignal =
-            messages.length === 1 &&
-            messages[0].role === "system" &&
-            messages[0].content === "INIT_INTERVIEW";
+          // 检测面试初始化信号 - 修复检测逻辑
+          const isInitSignal = messages.some(
+            (msg) =>
+              msg.role === "system" &&
+              (msg.content === "INIT_INTERVIEW" ||
+                (msg.parts &&
+                  msg.parts.some(
+                    (part: any) => part.text === "INIT_INTERVIEW",
+                  ))),
+          );
 
           if (messages.length === 0 || isInitSignal) {
-            // 面试初始化阶段：使用简洁的通用提示词，不包含个性化信息
-            systemPrompt = "你是一位专业的面试官。" + SELF_INTRO_OPENING_ONLY;
+            // 面试初始化阶段：使用简洁的个性化提示词
+            const personalizedContext = extractPersonalizedContext(userProfile);
+            systemPrompt = generateSimpleInterviewPrompt(personalizedContext);
           } else {
             // 正常对话阶段：使用个性化面试提示词
             const personalizedContext = extractPersonalizedContext(userProfile);
             systemPrompt =
               generatePersonalizedInterviewPrompt(personalizedContext);
 
-            // 添加对话历史管理指导
-            systemPrompt += CONVERSATION_HISTORY_GUIDANCE;
+            // 添加强化的单问题约束
+            systemPrompt += "\n\n" + SINGLE_QUESTION_CONSTRAINT;
 
-            // 非首次对话，添加对话历史指导
-            systemPrompt += "\n\n## 对话历史指导\n";
-            systemPrompt +=
-              "请仔细回顾之前的对话内容，避免重复提问，基于候选人的回答进行深入的技术追问。";
+            // 添加单问题约束指导
+            systemPrompt += "\n\n" + SINGLE_QUESTION_GUIDANCE;
+
+            // 添加对话历史管理指导
+            systemPrompt += "\n\n" + CONVERSATION_HISTORY_GUIDANCE;
 
             // 使用 RAG 进行深度分析（可选）
             try {

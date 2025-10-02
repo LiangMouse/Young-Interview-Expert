@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 // Temporarily avoid Radix ScrollArea to eliminate update-depth loops
-import { Send, Loader2 } from "lucide-react";
+import { Loader2, Mic, AudioLines, ArrowUp } from "lucide-react";
 import type { UIMessage } from "@ai-sdk/react";
 import { MessageItem } from "./message-item";
-import { VoiceControls } from "./voice-controls";
 
 interface ChatInterfaceProps {
   messages: UIMessage[];
@@ -23,12 +22,15 @@ interface ChatInterfaceProps {
   isSpeaking: boolean;
   isRecording: boolean;
   isListening: boolean;
-  sttError: string | null;
-  ttsError: string | null;
-  interimTranscript: string;
   onVoiceModeToggle: () => void;
-  onStopTTS: () => void;
   onToggleRecording: () => void;
+  // 语音转文字相关
+  isSTTRecording: boolean;
+  sttTranscript: string;
+  sttInterimTranscript: string;
+  sttError: string | null;
+  isSTTSupported: boolean;
+  onToggleSTTRecording: () => void;
 }
 
 export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
@@ -45,12 +47,14 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
       isSpeaking,
       isRecording,
       isListening,
-      sttError,
-      ttsError,
-      interimTranscript,
       onVoiceModeToggle,
-      onStopTTS,
-      onToggleRecording,
+      // 语音转文字相关
+      isSTTRecording,
+      sttTranscript,
+      sttInterimTranscript,
+      sttError,
+      isSTTSupported,
+      onToggleSTTRecording,
     },
     messagesEndRef,
   ) => {
@@ -74,6 +78,32 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
     useEffect(() => {
       adjustTextareaHeight();
     }, [input, adjustTextareaHeight]);
+
+    // 语音转文字：在开始录音时记录输入的基线值
+    const sttBaseInputRef = useRef("");
+    const wasSTTRecordingRef = useRef(false);
+    const sttJustStartedRef = useRef(false);
+    useEffect(() => {
+      if (isSTTRecording && !wasSTTRecordingRef.current) {
+        // 录音刚开始，记录当前输入作为基线
+        sttBaseInputRef.current = input;
+        // 本次会话刚开始，首个 effect 周期忽略旧的残留转录
+        sttJustStartedRef.current = true;
+      }
+      wasSTTRecordingRef.current = isSTTRecording;
+    }, [isSTTRecording, input]);
+
+    useEffect(() => {
+      if (!isSTTRecording) return;
+      // 首帧：只恢复基线，避免使用上一次会话残留的转录
+      if (sttJustStartedRef.current) {
+        sttJustStartedRef.current = false;
+        setInput(sttBaseInputRef.current);
+        return;
+      }
+      const liveText = `${sttTranscript || ""}${sttInterimTranscript || ""}`;
+      setInput(sttBaseInputRef.current + liveText);
+    }, [isSTTRecording, sttTranscript, sttInterimTranscript, setInput]);
 
     // 防重复点击的发送函数
     const handleSendMessage = useCallback(
@@ -177,9 +207,17 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
               </div>
             </div>
 
-            {/* Bottom Input Area */}
+            {/* 输入框 */}
             <div className="p-6 border-t border-white/20">
-              <div className="flex items-center space-x-3">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!isActuallyLoading && !isVoiceMode && input.trim()) {
+                    handleSendMessage();
+                  }
+                }}
+                className="flex items-center space-x-3"
+              >
                 <motion.div
                   className="flex-1 relative"
                   whileFocus={{ scale: 1.01 }}
@@ -194,70 +232,80 @@ export const ChatInterface = forwardRef<HTMLDivElement, ChatInterfaceProps>(
                     placeholder={
                       isActuallyLoading
                         ? "AI正在回复中..."
-                        : "输入你的问题或回答... (Shift+Enter换行，Enter发送)"
+                        : "输入你的问题或回答... "
                     }
                     className="pr-12 rounded-2xl border-white/30 bg-white/50 backdrop-blur-sm resize-none min-h-[44px] max-h-[120px]"
-                    onKeyDown={(e) => {
-                      if (
-                        e.key === "Enter" &&
-                        !e.shiftKey &&
-                        !isActuallyLoading
-                      ) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
                     disabled={isActuallyLoading || isVoiceMode}
                     rows={1}
                   />
-                  <Button
-                    onClick={() => handleSendMessage()}
-                    size="sm"
-                    className="absolute right-2 top-2 rounded-xl bg-gradient-to-r from-sky-400 to-purple-400 hover:from-sky-500 hover:to-purple-500"
-                    disabled={isActuallyLoading || !input.trim() || isVoiceMode}
-                  >
-                    {isActuallyLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <motion.div
-                        whileHover={{ x: 2 }}
-                        transition={{ duration: 0.2 }}
+                  {/* Right action buttons */}
+                  <div className="absolute right-2 top-2 flex items-center gap-2">
+                    {/* Mic button - always visible */}
+                    <button
+                      type="button"
+                      aria-label="语音转文字"
+                      className={`h-8 w-8 rounded-full flex items-center justify-center border cursor-pointer ${
+                        isSTTRecording
+                          ? "bg-white text-red-600 border-red-500"
+                          : "bg-white/70 hover:bg-white text-gray-800 border-white/50"
+                      }`}
+                      disabled={isActuallyLoading || !isSTTSupported}
+                      onClick={onToggleSTTRecording}
+                    >
+                      <Mic
+                        className={`h-4 w-4 ${isSTTRecording ? "text-red-600" : ""}`}
+                      />
+                    </button>
+                    {/* Second button: when input empty -> AudioLines; when has input -> submit ArrowUp */}
+                    {input.trim().length === 0 ? (
+                      <button
+                        type="button"
+                        aria-label="语音聊天"
+                        className={`h-8 w-8 rounded-full flex items-center justify-center border cursor-pointer ${
+                          isVoiceMode
+                            ? "bg-blue-500 text-white border-blue-500"
+                            : "bg-white/70 hover:bg-white text-gray-800 border-white/50"
+                        }`}
+                        disabled={isActuallyLoading}
+                        onClick={onVoiceModeToggle}
                       >
-                        <Send className="w-4 h-4" />
-                      </motion.div>
+                        <AudioLines className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        aria-label="发送"
+                        className="h-8 w-8 rounded-full bg-black text-white hover:bg-gray-900 flex items-center cursor-pointer justify-center"
+                        disabled={isActuallyLoading}
+                      >
+                        {isActuallyLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <ArrowUp className="h-4 w-4" />
+                        )}
+                      </button>
                     )}
-                  </Button>
+                  </div>
                 </motion.div>
-
-                <VoiceControls
-                  isVoiceMode={isVoiceMode}
-                  isSpeaking={isSpeaking}
-                  isRecording={isRecording}
-                  isLoading={isActuallyLoading}
-                  onVoiceModeToggle={onVoiceModeToggle}
-                  onStopTTS={onStopTTS}
-                  onToggleRecording={onToggleRecording}
-                />
-              </div>
+              </form>
               <p className="text-xs text-gray-500 mt-2 text-center">
                 {isActuallyLoading
                   ? "AI正在思考，请稍候..."
-                  : isVoiceMode
-                    ? isListening
-                      ? "正在听取您的回答..."
-                      : isSpeaking
-                        ? "AI正在说话..."
-                        : "点击麦克风开始回答"
-                    : "支持文本和语音输入"}
+                  : isSTTRecording
+                    ? "正在听取您的语音..."
+                    : sttInterimTranscript
+                      ? `实时转录: ${sttInterimTranscript}`
+                      : isVoiceMode
+                        ? isListening
+                          ? "正在听取您的回答..."
+                          : isSpeaking
+                            ? "AI正在说话..."
+                            : "点击麦克风开始回答"
+                        : "支持文本和语音输入"}
               </p>
-              {isVoiceMode && (sttError || ttsError) && (
+              {sttError && (
                 <p className="text-xs text-red-500 mt-1 text-center">
-                  {sttError || ttsError}
-                </p>
-              )}
-              {isVoiceMode && interimTranscript && (
-                <p className="text-xs text-blue-500 mt-1 text-center">
-                  实时转录: {interimTranscript}
+                  语音识别错误: {sttError}
                 </p>
               )}
             </div>
