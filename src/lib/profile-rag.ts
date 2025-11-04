@@ -3,6 +3,7 @@ import type {
   WorkExperience,
   ProjectExperience,
 } from "@/types/profile";
+import { sanitizeProfileData } from "@/lib/security/prompt-injection";
 
 /**
  * 用户资料RAG处理服务
@@ -53,13 +54,22 @@ export interface PersonalizedInterviewContext {
 export function extractPersonalizedContext(
   userProfile: UserProfile,
 ): PersonalizedInterviewContext {
+  // 清理用户资料数据，防止注入
   const basicInfo = {
-    nickname: userProfile.nickname || undefined,
-    jobIntention: userProfile.job_intention || undefined,
-    companyIntention: userProfile.company_intention || undefined,
+    nickname: userProfile.nickname
+      ? sanitizeProfileData(userProfile.nickname)
+      : undefined,
+    jobIntention: userProfile.job_intention
+      ? sanitizeProfileData(userProfile.job_intention)
+      : undefined,
+    companyIntention: userProfile.company_intention
+      ? sanitizeProfileData(userProfile.company_intention)
+      : undefined,
     experienceYears: userProfile.experience_years || undefined,
-    skills: userProfile.skills || undefined,
-    bio: userProfile.bio || undefined,
+    skills: userProfile.skills
+      ? userProfile.skills.map((skill) => sanitizeProfileData(skill))
+      : undefined,
+    bio: userProfile.bio ? sanitizeProfileData(userProfile.bio) : undefined,
   };
 
   const workExperienceSummary = analyzeWorkExperience(
@@ -94,12 +104,13 @@ function analyzeWorkExperience(
     };
   }
 
+  // 清理工作经历数据
   const keyCompanies = workExperiences
-    .map((exp) => exp.company)
-    .filter(Boolean);
+    .map((exp) => (exp.company ? sanitizeProfileData(exp.company) : null))
+    .filter(Boolean) as string[];
   const keyPositions = workExperiences
-    .map((exp) => exp.position)
-    .filter(Boolean);
+    .map((exp) => (exp.position ? sanitizeProfileData(exp.position) : null))
+    .filter(Boolean) as string[];
 
   // 分析职业发展轨迹
   const careerProgression = analyzeCareerProgression(workExperiences);
@@ -230,8 +241,13 @@ function analyzeIndustryBackground(
   const industries = new Set<string>();
 
   workExperiences.forEach((exp) => {
-    const company = exp.company.toLowerCase();
-    const description = exp.description.toLowerCase();
+    // 清理描述数据
+    const description = exp.description
+      ? sanitizeProfileData(exp.description).toLowerCase()
+      : "";
+    const company = exp.company
+      ? sanitizeProfileData(exp.company).toLowerCase()
+      : "";
 
     if (
       company.includes("tech") ||
@@ -269,8 +285,13 @@ function analyzeProjectTypes(
   const types = new Set<string>();
 
   projectExperiences.forEach((proj) => {
-    const name = proj.project_name.toLowerCase();
-    const description = proj.description.toLowerCase();
+    // 清理项目数据
+    const name = proj.project_name
+      ? sanitizeProfileData(proj.project_name).toLowerCase()
+      : "";
+    const description = proj.description
+      ? sanitizeProfileData(proj.description).toLowerCase()
+      : "";
 
     if (
       name.includes("web") ||
@@ -415,6 +436,7 @@ export function generateSimpleInterviewPrompt(
 
   let prompt = `你是一位专业的AI面试官。`;
 
+  // 数据已在 extractPersonalizedContext 中清理，这里直接使用
   if (basicInfo.nickname) {
     prompt += ` 候选人姓名：${basicInfo.nickname}。`;
   }

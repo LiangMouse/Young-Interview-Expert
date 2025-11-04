@@ -6,6 +6,10 @@ import {
   processInterviewSpeech,
   getInterviewHistory,
 } from "@/action/interview";
+import {
+  sanitizeMessageContent,
+  detectInjectionAttempt,
+} from "@/lib/security/prompt-injection";
 
 // 全局 Socket.io 实例
 let io: Server<ClientToServerEvents, ServerToClientEvents> | null = null;
@@ -42,7 +46,18 @@ export async function GET() {
           interviewId: string;
           userId: string;
         }) => {
-          console.log("Received user speech:", data.transcript);
+          // 清理语音转录文本，防止注入
+          const sanitizedTranscript = sanitizeMessageContent(data.transcript);
+
+          // 检测注入尝试
+          const detection = detectInjectionAttempt(sanitizedTranscript);
+          if (detection.isInjection) {
+            console.warn(
+              `[安全] 检测到语音输入中的注入尝试 (严重程度: ${detection.severity})`,
+            );
+          }
+
+          console.log("Received user speech:", sanitizedTranscript);
 
           try {
             // 获取对话历史
@@ -56,9 +71,9 @@ export async function GET() {
                   }))
                 : [];
 
-            // 处理面试语音并生成回应
+            // 处理面试语音并生成回应（使用清理后的文本）
             const result = await processInterviewSpeech({
-              transcript: data.transcript,
+              transcript: sanitizedTranscript,
               interviewId: data.interviewId,
             });
 

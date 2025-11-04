@@ -121,16 +121,6 @@ export function useSpeechRecognition({
         }
         setIsListening(false);
       };
-
-      // 处理无语音输入
-      recognition.onnomatch = () => {
-        // 不作为错误处理，保持等待
-      };
-
-      // 处理无语音服务
-      (recognition as any).onnospeech = () => {
-        setError("未检测到语音，请重试");
-      };
     }
   }, [continuous, interimResults, language, onResult, onError]);
 

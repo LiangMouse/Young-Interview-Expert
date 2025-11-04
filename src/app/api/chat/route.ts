@@ -21,6 +21,11 @@ import {
   SINGLE_QUESTION_GUIDANCE,
   SINGLE_QUESTION_CONSTRAINT,
 } from "@/lib/prompt";
+import {
+  sanitizeMessageContent,
+  sanitizeRAGQuery,
+  detectInjectionAttempt,
+} from "@/lib/security/prompt-injection";
 /**
  * 处理聊天消息的 POST 请求
  *
@@ -128,7 +133,10 @@ export async function POST(request: NextRequest) {
                 })
                 .join(" ");
 
-              if (queryText.trim()) {
+              // 清理 RAG 查询文本，防止注入
+              let sanitizedQueryText = sanitizeRAGQuery(queryText);
+
+              if (sanitizedQueryText.trim()) {
                 // 检索相关文档
                 const relevantDocs = await retrieveRelevantDocuments(
                   queryText,
@@ -164,9 +172,46 @@ export async function POST(request: NextRequest) {
 
     // 4. 构建消息数组，添加系统提示词
     // 过滤掉INIT_INTERVIEW初始化信号，避免发送给AI
-    const filteredMessages = messages.filter(
-      (msg) => !(msg.role === "system" && msg.content === "INIT_INTERVIEW"),
-    );
+    // 同时清理用户消息内容，防止提示词注入
+    const filteredMessages = messages
+      .filter(
+        (msg) => !(msg.role === "system" && msg.content === "INIT_INTERVIEW"),
+      )
+      .map((msg) => {
+        // 清理用户消息内容
+        if (msg.role === "user") {
+          // 处理 UIMessage 格式（有 parts）
+          if (msg.parts && Array.isArray(msg.parts)) {
+            const cleanedParts = msg.parts.map((part: any) => {
+              if (part.type === "text" && part.text) {
+                // 检测注入尝试
+                const detection = detectInjectionAttempt(part.text);
+                if (detection.isInjection && detection.severity === "high") {
+                  console.warn("[安全] 检测到高严重程度注入尝试，已清理");
+                }
+                return {
+                  ...part,
+                  text: sanitizeMessageContent(part.text),
+                };
+              }
+              return part;
+            });
+            return { ...msg, parts: cleanedParts };
+          }
+          // 处理传统格式（有 content）
+          if (msg.content) {
+            const detection = detectInjectionAttempt(msg.content);
+            if (detection.isInjection && detection.severity === "high") {
+              console.warn("[安全] 检测到高严重程度注入尝试，已清理");
+            }
+            return {
+              ...msg,
+              content: sanitizeMessageContent(msg.content),
+            };
+          }
+        }
+        return msg;
+      });
 
     const messagesWithSystem = [
       { role: "system", content: systemPrompt },

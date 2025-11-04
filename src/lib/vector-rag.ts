@@ -1,5 +1,10 @@
 import type { UserProfile } from "@/types/profile";
 import { createClient } from "@/lib/supabase/client";
+import {
+  sanitizeProfileData,
+  sanitizeRAGQuery,
+  escapePromptContent,
+} from "@/lib/security/prompt-injection";
 
 /**
  * 向量RAG系统 - 基于pgvector的智能用户资料分析
@@ -43,12 +48,15 @@ export async function profileToVectorDocuments(
     userProfile.job_intention ||
     userProfile.company_intention
   ) {
+    // 清理用户资料数据，防止注入
     const basicContent = [
-      userProfile.bio && `个人简介: ${userProfile.bio}`,
-      userProfile.job_intention && `求职意向: ${userProfile.job_intention}`,
+      userProfile.bio && `个人简介: ${sanitizeProfileData(userProfile.bio)}`,
+      userProfile.job_intention &&
+        `求职意向: ${sanitizeProfileData(userProfile.job_intention)}`,
       userProfile.company_intention &&
-        `目标公司: ${userProfile.company_intention}`,
-      userProfile.nickname && `姓名: ${userProfile.nickname}`,
+        `目标公司: ${sanitizeProfileData(userProfile.company_intention)}`,
+      userProfile.nickname &&
+        `姓名: ${sanitizeProfileData(userProfile.nickname)}`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -68,10 +76,12 @@ export async function profileToVectorDocuments(
   // 工作经历文档
   if (userProfile.work_experiences) {
     userProfile.work_experiences.forEach((work, index) => {
+      // 清理工作经历数据
       const workContent = [
-        `公司: ${work.company}`,
-        `职位: ${work.position}`,
-        work.description && `工作描述: ${work.description}`,
+        work.company && `公司: ${sanitizeProfileData(work.company)}`,
+        work.position && `职位: ${sanitizeProfileData(work.position)}`,
+        work.description &&
+          `工作描述: ${sanitizeProfileData(work.description)}`,
         work.start_date && `开始时间: ${work.start_date}`,
         work.end_date && `结束时间: ${work.end_date}`,
       ]
@@ -94,11 +104,17 @@ export async function profileToVectorDocuments(
   // 项目经历文档
   if (userProfile.project_experiences) {
     userProfile.project_experiences.forEach((project, index) => {
+      // 清理项目经历数据
       const projectContent = [
-        `项目名称: ${project.project_name}`,
-        project.description && `项目描述: ${project.description}`,
-        project.tech_stack && `技术栈: ${project.tech_stack.join(", ")}`,
-        project.role && `担任角色: ${project.role}`,
+        project.project_name &&
+          `项目名称: ${sanitizeProfileData(project.project_name)}`,
+        project.description &&
+          `项目描述: ${sanitizeProfileData(project.description)}`,
+        project.tech_stack &&
+          `技术栈: ${project.tech_stack
+            .map((tech) => sanitizeProfileData(tech))
+            .join(", ")}`,
+        project.role && `担任角色: ${sanitizeProfileData(project.role)}`,
         project.start_date && `开始时间: ${project.start_date}`,
         project.end_date && `结束时间: ${project.end_date}`,
       ]
@@ -120,7 +136,10 @@ export async function profileToVectorDocuments(
 
   // 技能文档
   if (userProfile.skills && userProfile.skills.length > 0) {
-    const skillsContent = `核心技能: ${userProfile.skills.join(", ")}`;
+    // 清理技能数据
+    const skillsContent = `核心技能: ${userProfile.skills
+      .map((skill) => sanitizeProfileData(skill))
+      .join(", ")}`;
     documents.push({
       id: `skills_${userProfile.id}`,
       content: skillsContent,
@@ -188,8 +207,11 @@ export async function retrieveRelevantDocuments(
 ): Promise<VectorDocument[]> {
   const supabase = createClient();
 
+  // 清理查询文本，防止注入
+  const sanitizedQuery = sanitizeRAGQuery(query);
+
   // 生成查询向量
-  const queryEmbedding = await generateEmbedding(query);
+  const queryEmbedding = await generateEmbedding(sanitizedQuery);
 
   // 使用pgvector进行相似度搜索
   const { data, error } = await supabase.rpc("match_user_profile_vectors", {
@@ -213,12 +235,24 @@ export async function retrieveRelevantDocuments(
 export function generateIntelligentAnalysisPrompt(context: RAGContext): string {
   const { relevantDocuments } = context;
 
+  // 清理文档内容，防止注入
+  const sanitizedDocuments = relevantDocuments.map((doc) => ({
+    ...doc,
+    content: escapePromptContent(doc.content),
+    metadata: {
+      ...doc.metadata,
+      keywords: doc.metadata.keywords.map((keyword) =>
+        escapePromptContent(keyword),
+      ),
+    },
+  }));
+
   const prompt = `# 智能面试官分析任务
 
 你是一位资深的AI面试官，需要基于以下用户资料信息，动态分析并制定个性化的面试策略。
 
 ## 用户资料信息
-${relevantDocuments
+${sanitizedDocuments
   .map(
     (doc) => `
 ### ${doc.metadata.type.toUpperCase()}

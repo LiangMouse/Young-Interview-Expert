@@ -1,6 +1,7 @@
 // 聊天相关的工具函数
 import type { UIMessage } from "@ai-sdk/react";
 import type { CoreMessage } from "ai";
+import { sanitizeMessageContent } from "@/lib/security/prompt-injection";
 
 // 聊天消息接口 - 与 src/types/interview.ts 中的 Message 保持一致
 export interface ChatMessage {
@@ -26,15 +27,27 @@ export function convertToCoreMessages(uiMessages: UIMessage[]): CoreMessage[] {
           .map((part: any) => part.text)
           .join("");
 
+        // 清理用户消息内容（防止注入）
+        const cleanedContent =
+          message.role === "user"
+            ? sanitizeMessageContent(textContent)
+            : textContent;
+
         return {
           role: message.role,
-          content: textContent,
+          content: cleanedContent,
         };
       }
       // 如果已经是传统格式（有 content 属性）
+      const rawContent = (message as any).content || "";
+      const cleanedContent =
+        message.role === "user"
+          ? sanitizeMessageContent(rawContent)
+          : rawContent;
+
       return {
         role: message.role,
-        content: (message as any).content || "",
+        content: cleanedContent,
       };
     })
     .filter((message) => message.content.trim() !== ""); // 过滤掉空消息
