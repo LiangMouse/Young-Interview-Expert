@@ -1,0 +1,25 @@
+# 依赖和构建产物
+node_modules
+.next
+out
+build
+dist
+*.tsbuildinfo
+
+# 配置和锁文件
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# 文档和笔记
+*.md
+my-note/
+docs/
+
+# 数据库脚本
+database/*.sql
+
+# 其他
+.DS_Store
+.env*
+
