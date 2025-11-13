@@ -94,12 +94,10 @@ async function analyzeResume(
 > {
   try {
     const model = new ChatOpenAI({
-      modelName: "deepseek-chat",
+      model: "deepseek-chat",
       temperature: 0,
       apiKey: process.env.DEEPSEEK_V3_API,
-      configuration: {
-        baseURL: "https://api.deepseek.com/v1",
-      },
+      baseURL: "https://api.deepseek.com/v1",
     });
 
     const parser = new JsonOutputParser<ResumeData>();

@@ -3,6 +3,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-primary-100: #dddfff;
+  --color-primary-200: #cac5fe;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -132,6 +134,12 @@
 
 /* Typography styles for markdown rendering */
 @layer components {
+  .auth-layout {
+    @apply flex items-center justify-center mx-auto max-w-7xl min-h-screen max-sm:px-4 max-sm:py-8;
+  }
+  .animate-speak {
+    @apply absolute inline-flex size-5/6 animate-ping rounded-full bg-primary-200 opacity-75;
+  }
   .prose {
     color: rgb(55 65 81);
     max-width: none;

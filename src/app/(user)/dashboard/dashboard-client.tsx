@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Play,
   Award,
@@ -19,10 +18,10 @@ import { IncompleteProfileDialog } from "./components/incomplete-profile-dialog"
 import { createInterview } from "@/action/create-interview";
 import { logOut as logout } from "@/action/auth";
 import RecentInterviews from "./components/recentInterviews";
+import { HeaderAvatar } from "@/components/header-avatar";
 
 export default function DashboardClient() {
   const { userInfo } = useUserStore();
-  console.log(userInfo, "用户信息");
   const [loading, setLoading] = useState(false);
   const [interviewLoading, setInterviewLoading] = useState(false);
   const [isDialogOpen, setDialogOpen] = useState(false);
@@ -65,7 +64,7 @@ export default function DashboardClient() {
       const result = await createInterview();
 
       if (result.interviewId) {
-        router.push(`/interview/${result.interviewId}`);
+        router.push(`/interview/${result.interviewId}?mode=video`);
       } else {
         // Handle error, maybe show a toast notification
         console.error(result.error);
@@ -119,12 +118,7 @@ export default function DashboardClient() {
             >
               <LogOut className="w-4 h-4" />
             </Button>
-            <Avatar className="w-8 h-8">
-              <AvatarImage src={userInfo.avatar_url || "/placeholder.svg"} />
-              <AvatarFallback>
-                {userName.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <HeaderAvatar avatarUrl={userInfo.avatar_url} userName={userName} />
           </div>
         </div>
       </header>

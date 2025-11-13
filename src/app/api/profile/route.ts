@@ -67,31 +67,84 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // 准备用户资料数据
+    // 获取现有用户资料（如果存在）
+    const { data: existingProfile, error: fetchError } = await supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+
+    const isFirstCreate = fetchError?.code === "PGRST116" || !existingProfile;
+
+    // 合并现有资料和请求体数据
+    // 原则：请求体中提供的字段优先，未提供的字段使用现有值
+    // 这样即使单独上传头像后，保存其他资料时也会自动保留数据库中的最新头像
+
+    // 辅助函数：如果请求体中有值则使用，否则使用现有值或默认值
+    const getValue = <T>(
+      requestValue: T | undefined,
+      existingValue: T | null | undefined,
+      defaultValue: T,
+    ): T => {
+      return requestValue !== undefined
+        ? requestValue
+        : (existingValue ?? defaultValue);
+    };
+
     const profileData: ProfileData = {
       user_id: user.id,
-      nickname: body.nickname || "",
-      bio: body.bio || "",
-      job_intention: body.job_intention || "",
-      company_intention: body.company_intention || "",
-      skills: Array.isArray(body.skills) ? body.skills : [],
-      experience_years: parseInt(body.experience_years) || 0,
-      graduation_date: body.graduation_date || "",
-      work_experiences: body.work_experiences || [],
-      project_experiences: body.project_experiences || [],
-      resume_url: body.resume_url || "",
-      avatar_url: user.user_metadata?.avatar_url || "",
+      nickname: getValue(body.nickname, existingProfile?.nickname, ""),
+      bio: getValue(body.bio, existingProfile?.bio, ""),
+      job_intention: getValue(
+        body.job_intention,
+        existingProfile?.job_intention,
+        "",
+      ),
+      company_intention: getValue(
+        body.company_intention,
+        existingProfile?.company_intention,
+        "",
+      ),
+      // 如果请求体中有 skills，确保它是数组；否则使用现有值或默认值
+      skills:
+        body.skills !== undefined
+          ? Array.isArray(body.skills)
+            ? body.skills
+            : []
+          : (existingProfile?.skills ?? []),
+      // 如果请求体中有 experience_years，解析它；否则使用现有值或默认值
+      experience_years:
+        body.experience_years !== undefined
+          ? parseInt(String(body.experience_years)) || 0
+          : (existingProfile?.experience_years ?? 0),
+      graduation_date: getValue(
+        body.graduation_date,
+        existingProfile?.graduation_date,
+        "",
+      ),
+      work_experiences: getValue(
+        body.work_experiences,
+        existingProfile?.work_experiences,
+        [],
+      ),
+      project_experiences: getValue(
+        body.project_experiences,
+        existingProfile?.project_experiences,
+        [],
+      ),
+      resume_url: getValue(body.resume_url, existingProfile?.resume_url, ""),
+      // avatar_url 自动从数据库获取最新值（如果请求体中没有提供）
+      // 这样即使单独上传头像后，保存其他资料时也会自动保留数据库中的最新头像
+      avatar_url: getValue(
+        body.avatar_url,
+        existingProfile?.avatar_url || user.user_metadata?.avatar_url || null,
+        "",
+      ),
       updated_at: new Date().toISOString(),
     };
 
     // 如果是第一次创建，添加created_at
-    const { data: existingProfile } = await supabase
-      .from("user_profiles")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!existingProfile) {
+    if (isFirstCreate) {
       profileData.created_at = new Date().toISOString();
     }
 

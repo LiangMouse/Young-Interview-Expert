@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   ArrowLeft,
   Home,
@@ -28,6 +27,7 @@ import { uploadResume } from "@/action/upload-resume";
 import { ResumeParseConfirmDialog } from "@/components/resume-parse-confirm-dialog";
 import { UserResume } from "./component/user_resume";
 import { useUserStore } from "@/store/user";
+import { HeaderAvatar } from "@/components/header-avatar";
 
 interface ProfileClientProps {
   user: User;
@@ -154,7 +154,7 @@ export default function ProfileClient({
       handleResumeUpload(file);
     }
   };
-
+  // TODO
   const handleResumeUpload = async (file: File) => {
     if (!file) {
       return;
@@ -348,14 +348,12 @@ export default function ProfileClient({
             <Button variant="ghost" size="sm" className="rounded-full">
               <Settings className="w-4 h-4" />
             </Button>
-            <Avatar className="w-8 h-8">
-              <AvatarImage
-                src={user.user_metadata?.avatar_url || "/placeholder.svg"}
-              />
-              <AvatarFallback>
-                {userName.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <HeaderAvatar
+              avatarUrl={
+                initialProfile?.avatar_url || user.user_metadata?.avatar_url
+              }
+              userName={userName}
+            />
           </div>
         </div>
       </header>
