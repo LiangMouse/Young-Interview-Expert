@@ -15,9 +15,11 @@ export default function InterviewClient({
   userProfile,
   interview,
 }: InterviewClientProps) {
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const userName = userProfile?.nickname || user?.email || "用户";
+
+  // 语音模式状态
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
 
   // 面试逻辑 Hook
   const interviewLogic = useInterviewLogic({

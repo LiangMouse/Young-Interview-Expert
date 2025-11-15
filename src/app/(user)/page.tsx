@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
-import DashboardClient from "./dashboard-client";
+import DashboardClient from "./dashboard/dashboard-client";
 import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
