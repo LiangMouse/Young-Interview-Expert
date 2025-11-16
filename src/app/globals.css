@@ -5,6 +5,9 @@
 @theme inline {
   --color-primary-100: #dddfff;
   --color-primary-200: #cac5fe;
+  --color-light-100: #d6e0ff;
+  --color-success-100: #49de50;
+  --color-success-200: #42c748;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -130,6 +133,21 @@
   #__next {
     min-height: 100vh;
   }
+  p {
+    @apply text-light-100;
+  }
+  h2 {
+    @apply text-3xl font-semibold;
+  }
+  h3 {
+    @apply text-2xl font-semibold;
+  }
+  ul {
+    @apply list-disc list-inside;
+  }
+  li {
+    @apply text-light-100;
+  }
 }
 
 /* Typography styles for markdown rendering */
@@ -144,6 +162,9 @@
     color: rgb(55 65 81);
     max-width: none;
   }
+  .btn-call {
+    @apply inline-block px-7 py-3 font-bold text-sm leading-5 text-white transition-colors duration-150 bg-success-100 border border-transparent rounded-full shadow-sm focus:outline-none focus:shadow-2xl active:bg-success-200 hover:bg-success-200 min-w-28 cursor-pointer items-center justify-center overflow-visible;
+  }
   .root-layout {
     @apply flex mx-auto max-w-7xl flex-col gap-12 my-12 px-16 max-sm:px-4 max-sm:my-8;
   }
@@ -151,7 +172,33 @@
     font-size: 0.875rem;
     line-height: 1.7142857;
   }
+  .call-view {
+    @apply flex sm:flex-row flex-col gap-10 items-center justify-between w-full;
 
+    h3 {
+      @apply text-center text-primary-100 mt-5;
+    }
+
+    .card-interviewer {
+      @apply flex-center flex-col gap-2 p-7 h-[400px] blue-gradient-dark rounded-lg border-2 border-primary-200/50 flex-1 sm:basis-1/2 w-full;
+    }
+
+    .avatar {
+      @apply z-10 flex items-center justify-center blue-gradient rounded-full size-[120px] relative;
+
+      .animate-speak {
+        @apply absolute inline-flex size-5/6 animate-ping rounded-full bg-primary-200 opacity-75;
+      }
+    }
+
+    .card-border {
+      @apply border-gradient p-0.5 rounded-2xl flex-1 sm:basis-1/2 w-full h-[400px] max-md:hidden;
+    }
+
+    .card-content {
+      @apply flex flex-col gap-2 justify-center items-center p-7 dark-gradient rounded-2xl min-h-full;
+    }
+  }
   .prose-gray {
     --tw-prose-body: rgb(55 65 81);
     --tw-prose-headings: rgb(17 24 39);
@@ -290,4 +337,22 @@
   .prose pre code::after {
     content: none;
   }
+}
+
+@utility blue-gradient-dark {
+  @apply bg-gradient-to-b from-[#171532] to-[#08090D];
+}
+
+@utility flex-center {
+  @apply flex items-center justify-center;
+}
+
+@utility blue-gradient {
+  @apply bg-gradient-to-l from-[#FFFFFF] to-[#CAC5FE];
+}
+@utility border-gradient {
+  @apply bg-gradient-to-b from-[#4B4D4F] to-[#4B4D4F33];
+}
+@utility dark-gradient {
+  @apply bg-gradient-to-b from-[#1A1C20] to-[#08090D];
 }
