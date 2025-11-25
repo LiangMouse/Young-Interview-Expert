@@ -42,7 +42,7 @@ export function Sidebar() {
       <div className="flex h-16 items-center gap-2 border-b border-[#E5E5E5] px-6">
         <Sparkles className="h-5 w-5 text-[#141414]" />
         <span className="text-lg font-medium text-[#141414]">
-          Interview Expert
+          Interview Lab
         </span>
       </div>
       <nav className="flex-1 space-y-0.5 p-4">

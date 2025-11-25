@@ -1,5 +1,5 @@
 "use client";
-
+// TODO
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -72,14 +72,21 @@ export function CodeEditor() {
 }
 
 function highlightSyntax(line: string): string {
+  // Escape HTML entities to prevent XSS and broken HTML
+  const escapedLine = line
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
   // Simple syntax highlighting
-  return line
+  // We use single quotes for style attributes to avoid conflict with double quotes in code
+  return escapedLine
     .replace(
       /\b(function|const|let|var|return|if|else|while|for|null)\b/g,
-      '<span style="color: #C586C0">$1</span>',
+      "<span style='color: #C586C0'>$1</span>",
     )
-    .replace(/\b(true|false)\b/g, '<span style="color: #4FC1FF">$1</span>')
-    .replace(/"([^"]*)"/g, '<span style="color: #CE9178">"$1"</span>')
-    .replace(/\/\/(.*)/g, '<span style="color: #6A9955">//$1</span>')
-    .replace(/\b(\d+)\b/g, '<span style="color: #B5CEA8">$1</span>');
+    .replace(/\b(true|false)\b/g, "<span style='color: #4FC1FF'>$1</span>")
+    .replace(/"([^"]*)"/g, "<span style='color: #CE9178'>\"$1\"</span>")
+    .replace(/\/\/(.*)/g, "<span style='color: #6A9955'>//$1</span>")
+    .replace(/\b(\d+)\b/g, "<span style='color: #B5CEA8'>$1</span>");
 }

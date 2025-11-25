@@ -1,15 +1,60 @@
 import { Bell, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Link from "next/link";
+import React from "react";
 
-export function DashboardHeader() {
+interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
+interface DashboardHeaderProps {
+  breadcrumbs?: BreadcrumbItem[];
+  heading?: string;
+  children?: React.ReactNode;
+}
+
+export function DashboardHeader({
+  breadcrumbs,
+  children,
+}: DashboardHeaderProps) {
+  const defaultBreadcrumbs = [
+    { label: "Home", href: "/" },
+    { label: "Dashboard", href: "/dashboard" },
+  ];
+
+  const items = breadcrumbs || defaultBreadcrumbs;
+
   return (
     <header className="flex h-16 items-center justify-between border-b border-[#E5E5E5] bg-white px-6 lg:px-8">
       <div className="flex items-center gap-2 text-sm text-[#666666]">
-        <span className="text-[#141414]">Home</span>
-        <ChevronRight className="h-4 w-4" />
-        <span>Dashboard</span>
+        {items.map((item, index) => (
+          <React.Fragment key={index}>
+            {index > 0 && <ChevronRight className="h-4 w-4" />}
+            {item.href ? (
+              <Link
+                href={item.href}
+                className={
+                  index === items.length - 1
+                    ? "text-[#141414]"
+                    : "hover:text-[#141414] transition-colors"
+                }
+              >
+                {item.label}
+              </Link>
+            ) : (
+              <span
+                className={index === items.length - 1 ? "text-[#141414]" : ""}
+              >
+                {item.label}
+              </span>
+            )}
+          </React.Fragment>
+        ))}
       </div>
       <div className="flex items-center gap-4">
+        {children}
+        <div className="h-6 w-px bg-[#E5E5E5]" />
         <button className="relative rounded-full p-2 text-[#666666] hover:text-[#141414] transition-colors">
           <Bell className="h-5 w-5" />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#141414]" />

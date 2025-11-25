@@ -20,8 +20,8 @@ export function ControlDock({
 }: ControlDockProps) {
   return (
     <div className="pointer-events-none fixed bottom-6 left-0 right-0 flex justify-center px-4">
-      <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/20 bg-white/90 px-6 py-3 shadow-lg backdrop-blur-md">
-        {/* Mic Toggle */}
+      <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/20 bg-white/80 px-6 py-3 shadow-lg backdrop-blur-md">
+        {/* Mic Toggle - Prominent emerald circle when active */}
         <Button
           variant="ghost"
           size="sm"
@@ -29,8 +29,8 @@ export function ControlDock({
           className={cn(
             "h-10 w-10 rounded-full p-0 transition-all",
             isMicActive
-              ? "bg-[#10B981] text-white hover:bg-[#10B981]/90"
-              : "text-[#666666] hover:text-[#141414]",
+              ? "bg-[#10B981] text-white hover:bg-[#10B981]/90 shadow-md"
+              : "text-[#666666] hover:bg-gray-100 hover:text-[#141414]",
           )}
         >
           {isMicActive ? (
@@ -45,7 +45,7 @@ export function ControlDock({
           variant="ghost"
           size="sm"
           onClick={onModeToggle}
-          className="h-10 w-10 rounded-full p-0 text-[#666666] hover:text-[#141414]"
+          className="h-10 w-10 rounded-full p-0 text-[#666666] hover:bg-gray-100 hover:text-[#141414]"
         >
           {isVoiceMode ? (
             <Keyboard className="h-5 w-5" />

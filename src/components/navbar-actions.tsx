@@ -30,7 +30,7 @@ export function NavbarActions() {
   }, []);
 
   const handleLogin = () => {
-    router.push("/auth/login");
+    router.push("/auth/sign-in");
   };
 
   const handleGetStarted = () => {
@@ -38,7 +38,7 @@ export function NavbarActions() {
     if (userInfo) {
       router.push("/dashboard");
     } else {
-      router.push("/auth/register");
+      router.push("/auth/sign-up");
     }
   };
 

@@ -21,6 +21,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 在登录状态重定向到根路由
-  return NextResponse.redirect(`${requestUrl.origin}/`);
+  // 在登录状态重定向到根页面下的dashboard页面
+  return NextResponse.redirect(`${requestUrl.origin}/dashboard`);
 }

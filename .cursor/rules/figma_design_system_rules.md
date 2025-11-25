@@ -4,7 +4,7 @@
 
 ## 🎯 项目概览
 
-- **项目名称**: AI Interview Expert（小面）
+- **项目名称**: Interview Lab（小面）
 - **技术栈**: Next.js 15 + React 19 + Tailwind CSS v4 + TypeScript
 - **UI 框架**: shadcn/ui + Radix UI
 - **设计风格**: 极简、冷静、现代、科技感、专业

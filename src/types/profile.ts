@@ -33,3 +33,16 @@ export interface UserProfile {
   created_at: string | null; // timestamp with time zone
   updated_at: string | null; // timestamp with time zone
 }
+
+export interface UserProfileFormData {
+  nickname?: string;
+  bio?: string;
+  job_intention?: string;
+  company_intention?: string;
+  skills?: string;
+  experience_years?: number;
+  graduation_date?: string;
+  work_experiences?: WorkExperience[];
+  project_experiences?: ProjectExperience[];
+  resume_url?: string;
+}

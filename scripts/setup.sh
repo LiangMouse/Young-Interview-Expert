@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Young Interview Expert - 项目设置脚本
+# Interview Lab - 项目设置脚本
 # 这个脚本会帮助你快速设置开发环境
 
 set -e
 
-echo "🚀 Young Interview Expert - 项目设置"
+echo "🚀 Interview Lab - 项目设置"
 echo "======================================"
 
 # 检查 Node.js 版本

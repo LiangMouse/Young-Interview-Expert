@@ -1,9 +1,28 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Play } from "lucide-react";
+import { useUserStore } from "@/store/user";
 
 export function HeroSection() {
+  const router = useRouter();
+  const { userInfo } = useUserStore();
+  const isLoggedIn = !!userInfo;
+
+  const handleStartSimulation = () => {
+    if (isLoggedIn) {
+      // 已登录：直接进入 Dashboard 或开始面试
+      router.push("/dashboard");
+    } else {
+      // 未登录：跳转到注册页
+      router.push("/auth/sign-in");
+    }
+  };
+
   return (
-    <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-32">
+    <section className="relative overflow-hidden pt-20 pb-20 lg:pt-30 lg:pb-32">
       {/* Background gradient effects */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-1/4 size-96 rounded-full bg-primary/10 blur-3xl" />
@@ -36,15 +55,17 @@ export function HeroSection() {
               <Button
                 size="lg"
                 className="group relative overflow-hidden bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-105 hover:shadow-xl hover:shadow-primary/30"
+                onClick={handleStartSimulation}
               >
-                Start Simulation
+                {isLoggedIn ? "Enter Dashboard" : "Start Simulation"}
                 <ArrowRight className="ml-2 size-5 transition-transform group-hover:translate-x-1" />
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="border-border hover:bg-muted bg-transparent"
+                className="border-border hover:bg-muted bg-transparent group"
               >
+                <Play className="mr-2 size-4 transition-transform group-hover:scale-110" />
                 Watch Demo
               </Button>
             </div>
@@ -81,21 +102,13 @@ export function HeroSection() {
             <div className="relative">
               {/* Main visual placeholder */}
               <div className="relative aspect-square w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-background to-accent/10 p-8 shadow-2xl">
-                <img
+                <Image
                   src="/abstract-tech-ai-interview-dashboard-with-code-and.jpg"
                   alt="AI Interview Platform"
-                  className="size-full rounded-xl object-cover"
+                  fill
+                  className="rounded-xl object-cover"
+                  priority
                 />
-              </div>
-
-              {/* Floating elements */}
-              <div className="absolute -top-4 -right-4 rounded-xl border border-border bg-card p-4 shadow-lg animate-float-delayed">
-                <div className="flex items-center gap-2">
-                  <div className="size-2 rounded-full bg-primary animate-pulse" />
-                  <span className="text-sm font-medium text-card-foreground">
-                    AI Analyzing...
-                  </span>
-                </div>
               </div>
             </div>
           </div>

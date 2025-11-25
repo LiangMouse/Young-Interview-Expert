@@ -13,7 +13,7 @@ export function Footer() {
                 <Sparkles className="size-4 text-primary-foreground" />
               </div>
               <span className="text-lg font-semibold text-foreground">
-                Young Interview Expert
+                Interview Lab
               </span>
             </Link>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
