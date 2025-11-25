@@ -323,40 +323,6 @@ export default function ProfileClient({
         onOpenChange={setIsConfirmDialogOpen}
         onConfirm={handleConfirmParse}
       />
-      {/* 顶部导航栏 */}
-      <header className="backdrop-blur-md bg-white/70 border-b border-white/20 px-6 py-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center space-x-3">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="rounded-full">
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-            </Link>
-            <div className="w-8 h-8 bg-gradient-to-r from-sky-400 to-purple-400 rounded-lg flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-sky-600 to-purple-600 bg-clip-text text-transparent">
-              个人资料
-            </h1>
-          </div>
-          <div className="flex items-center space-x-3">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm" className="rounded-full">
-                <Home className="w-4 h-4" />
-              </Button>
-            </Link>
-            <Button variant="ghost" size="sm" className="rounded-full">
-              <Settings className="w-4 h-4" />
-            </Button>
-            <HeaderAvatar
-              avatarUrl={
-                initialProfile?.avatar_url || user.user_metadata?.avatar_url
-              }
-              userName={userName}
-            />
-          </div>
-        </div>
-      </header>
 
       <div className="max-w-6xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

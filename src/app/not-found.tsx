@@ -28,7 +28,7 @@ export default function NotFound() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             返回上一页
           </Button>
-          <Link href="/dashboard">
+          <Link href="/">
             <Button className=" black rounded-full">
               <Home className="w-4 h-4 mr-2" />
               返回主页

@@ -2,12 +2,12 @@
 
 import { useState, useRef } from "react";
 import { InterviewClientProps } from "@/lib/types/interview";
-import { VoiceModeDialog } from "./components/voice-mode-dialog";
-import { PageHeader } from "./components/page-header";
-import { InterviewInfoPanel } from "./components/interview-info-panel";
+import { VoiceModeDialog } from "../../components/voice-mode-dialog";
+import { PageHeader } from "../../components/page-header";
+import { InterviewInfoPanel } from "../../components/interview-info-panel";
 import { useVoiceFeatures } from "./hooks/useVoiceFeatures";
 import { useInterviewLogic } from "./hooks/useInterviewLogic";
-import { ChatInterface } from "./components/chat-interface";
+import { ChatInterface } from "../../components/chat-interface";
 import type { SimpleMessage } from "@/types/message";
 
 export default function InterviewClient({

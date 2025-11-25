@@ -88,40 +88,12 @@ export default function DashboardClient() {
 
   const userName = userInfo.nickname || "用户";
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-purple-50 to-amber-50">
+    <div>
       <IncompleteProfileDialog
         open={isDialogOpen}
         onOpenChange={setDialogOpen}
         onConfirm={() => router.push("/profile")}
       />
-      {/* 顶部导航栏 */}
-      <header className="backdrop-blur-md bg-white/70 border-b border-white/20 px-6 py-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-sky-400 to-purple-400 rounded-lg flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-sky-600 to-purple-600 bg-clip-text text-transparent">
-              AI面试官 - 小面
-            </h1>
-          </div>
-          <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="sm" className="rounded-full">
-              <Settings className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="rounded-full"
-              onClick={handleLogout}
-              disabled={loading}
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
-            <HeaderAvatar avatarUrl={userInfo.avatar_url} userName={userName} />
-          </div>
-        </div>
-      </header>
 
       <div className="max-w-7xl mx-auto p-6">
         {/* 欢迎区域 */}

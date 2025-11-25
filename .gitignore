@@ -46,5 +46,6 @@ next-env.d.ts
 .vscode
 .kiro
 
+docs
 my-note
 src/lib/prompt/prompt_to_cursor
