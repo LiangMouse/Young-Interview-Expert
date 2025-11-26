@@ -1,6 +1,7 @@
 "use client";
 
 import { Bot, User } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const mockTranscript = [
   {
@@ -30,6 +31,8 @@ const mockTranscript = [
 ];
 
 export function TranscriptStream() {
+  const t = useTranslations("interview");
+
   return (
     <div className="h-full overflow-y-auto p-6 space-y-4">
       {mockTranscript.map((message, index) => (
@@ -55,7 +58,7 @@ export function TranscriptStream() {
           <div className="flex-1 space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-[#141414]">
-                {message.role === "interviewer" ? "AI Interviewer" : "You"}
+                {message.role === "interviewer" ? t("aiInterviewer") : t("you")}
               </span>
               <span className="text-xs text-[#999999]">
                 {message.timestamp}
@@ -72,7 +75,7 @@ export function TranscriptStream() {
                 <div>
                   {message.content.split("```").map((part, i) => {
                     if (i % 2 === 1) {
-                      const [lang, ...code] = part.split("\n");
+                      const [, ...code] = part.split("\n");
                       return (
                         <pre
                           key={i}

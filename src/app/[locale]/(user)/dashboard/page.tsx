@@ -12,6 +12,7 @@ export default async function DashboardPage() {
 
   if (!user) {
     redirect("/auth/sign-in");
+    return null;
   }
 
   return (

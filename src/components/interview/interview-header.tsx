@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { X, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 
 export function InterviewHeader() {
+  const t = useTranslations("interview");
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export function InterviewHeader() {
 
       <div className="flex items-center gap-4">
         <div className="text-sm text-[#666666]">
-          Time Elapsed:{" "}
+          {t("timeElapsed")}:{" "}
           <span className="font-medium text-[#141414]">
             {formatTime(elapsed)}
           </span>

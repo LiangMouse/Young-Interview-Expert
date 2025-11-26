@@ -1,10 +1,13 @@
+"use client";
+
 import { Bell, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import React from "react";
+import { useTranslations } from "next-intl";
 
 interface BreadcrumbItem {
-  label: string;
+  labelKey: string;
   href?: string;
 }
 
@@ -18,12 +21,23 @@ export function DashboardHeader({
   breadcrumbs,
   children,
 }: DashboardHeaderProps) {
-  const defaultBreadcrumbs = [
-    { label: "Home", href: "/" },
-    { label: "Dashboard", href: "/dashboard" },
+  const tDashboard = useTranslations("dashboard");
+  const tProfile = useTranslations("profile");
+
+  const defaultBreadcrumbs: BreadcrumbItem[] = [
+    { labelKey: "home", href: "/" },
+    { labelKey: "title", href: "/dashboard" },
   ];
 
   const items = breadcrumbs || defaultBreadcrumbs;
+
+  // Translate label based on key prefix
+  const translateLabel = (labelKey: string) => {
+    if (labelKey.startsWith("profile.")) {
+      return tProfile(labelKey.replace("profile.", ""));
+    }
+    return tDashboard(labelKey);
+  };
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-[#E5E5E5] bg-white px-6 lg:px-8">
@@ -40,13 +54,13 @@ export function DashboardHeader({
                     : "hover:text-[#141414] transition-colors"
                 }
               >
-                {item.label}
+                {translateLabel(item.labelKey)}
               </Link>
             ) : (
               <span
                 className={index === items.length - 1 ? "text-[#141414]" : ""}
               >
-                {item.label}
+                {translateLabel(item.labelKey)}
               </span>
             )}
           </React.Fragment>

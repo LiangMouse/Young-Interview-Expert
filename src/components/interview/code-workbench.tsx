@@ -6,8 +6,10 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, Lightbulb, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "./code-editor";
+import { useTranslations } from "next-intl";
 
 export function CodeWorkbench() {
+  const t = useTranslations("interview");
   const [isQuestionExpanded, setIsQuestionExpanded] = useState(false);
   const [isConsoleExpanded, setIsConsoleExpanded] = useState(true);
 
@@ -20,7 +22,7 @@ export function CodeWorkbench() {
         >
           <div className="flex items-center gap-3">
             <span className="text-xs font-medium text-[#888888]">
-              Problem 3
+              {t("problem", { number: 3 })}
             </span>
             <h3 className="text-base font-semibold text-[#E5E5E5]">
               Reverse Linked List
@@ -46,7 +48,9 @@ export function CodeWorkbench() {
               return the reversed list.
             </p>
             <div className="space-y-2">
-              <p className="text-xs font-medium text-[#E5E5E5]">Example:</p>
+              <p className="text-xs font-medium text-[#E5E5E5]">
+                {t("example")}:
+              </p>
               <pre className="rounded bg-[#1E1E20] p-3 text-xs text-[#AAAAAA]">
                 Input: head = [1,2,3,4,5]{"\n"}
                 Output: [5,4,3,2,1]
@@ -58,7 +62,7 @@ export function CodeWorkbench() {
               className="text-[#888888] hover:text-[#10B981]"
             >
               <Lightbulb className="mr-2 h-4 w-4" />
-              Show Hint
+              {t("showHint")}
             </Button>
           </div>
         )}
@@ -79,7 +83,7 @@ export function CodeWorkbench() {
           <div className="flex items-center justify-between border-b border-[#333333] bg-[#252527] px-4 py-2">
             <div className="flex items-center gap-2 text-xs font-medium text-[#E5E5E5]">
               <Terminal className="h-3.5 w-3.5" />
-              Terminal / Output
+              {t("terminal")}
             </div>
             <Button
               variant="ghost"
@@ -96,7 +100,7 @@ export function CodeWorkbench() {
               {"{ val: 5, next: { val: 4, next: { val: 3, next: null } } }"}
             </div>
             <div className="mt-2 text-[#888888]">
-              Execution completed in 0.12s
+              {t("executionCompleted", { time: "0.12s" })}
             </div>
           </div>
         </div>
@@ -109,7 +113,7 @@ export function CodeWorkbench() {
           className="border-l border-t border-[#333333] bg-[#252527] px-4 py-2 text-left text-xs font-medium text-[#888888] hover:text-[#E5E5E5]"
         >
           <Terminal className="mr-2 inline-block h-3.5 w-3.5" />
-          Show Terminal
+          {t("showTerminal")}
         </button>
       )}
     </div>

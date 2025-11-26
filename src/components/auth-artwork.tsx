@@ -1,7 +1,14 @@
+"use client";
+
 import { CheckCircle2 } from "lucide-react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 export function AuthArtwork() {
+  const t = useTranslations("auth.artwork");
+
+  const features = [t("feature1"), t("feature2"), t("feature3"), t("feature4")];
+
   return (
     <div className="relative w-full h-full min-h-screen bg-linear-to-br from-[#FDFCF8] to-[#F2F0E8] overflow-hidden">
       {/* Subtle geometric pattern overlay with fade mask */}
@@ -52,22 +59,16 @@ export function AuthArtwork() {
           {/* Headline */}
           <div className="space-y-4">
             <h2 className="text-4xl font-light text-[#141414] tracking-tight">
-              Master Your Next Interview
+              {t("title")}
             </h2>
             <p className="text-lg text-[#666666] leading-relaxed">
-              AI-powered practice sessions, real-time feedback, and personalized
-              improvement plans
+              {t("description")}
             </p>
           </div>
 
           {/* Feature list with Deep Emerald checkmarks */}
           <div className="grid gap-5 pt-4 place-items-center">
-            {[
-              "Advanced AI conversation analysis",
-              "Industry-specific question banks",
-              "Real-time performance insights",
-              "Personalized improvement roadmaps",
-            ].map((feature, index) => (
+            {features.map((feature, index) => (
               <div
                 key={index}
                 className="flex items-center gap-3 text-left w-full max-w-sm"

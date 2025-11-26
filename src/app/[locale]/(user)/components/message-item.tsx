@@ -5,8 +5,6 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import type { UIMessage } from "@ai-sdk/react";
-// TODO 考虑抽出一个可独立发包的组件
-
 // 扩展 UIMessage 类型以包含时间戳
 interface ExtendedUIMessage extends UIMessage {
   timestamp?: string;

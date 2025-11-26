@@ -1,0 +1,221 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit"
+  },
+  "nav": {
+    "projectName": "Interview Lab",
+    "features": "Features",
+    "pricing": "Pricing",
+    "about": "About",
+    "login": "Login",
+    "getStarted": "Get Started",
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "logout": "Logout",
+    "logoutSuccess": "Logged out successfully",
+    "logoutError": "Failed to logout, please try again"
+  },
+  "hero": {
+    "badge": "AI-Powered Interview Prep",
+    "title": "Ace Your Next",
+    "titleHighlight": "Technical Interview",
+    "description": "Your personal AI interview coach. Smart resume parsing, realistic mock interviews, and real-time code assessment with feedback.",
+    "startSimulation": "Start Simulation",
+    "enterDashboard": "Enter Dashboard",
+    "watchDemo": "Watch Demo",
+    "stats": {
+      "successStories": "Success Stories",
+      "satisfactionRate": "Satisfaction Rate",
+      "aiAvailability": "AI Availability"
+    }
+  },
+  "features": {
+    "title": "Everything You Need to Succeed",
+    "subtitle": "Our AI-powered platform provides comprehensive interview preparation tools",
+    "resumeParsing": {
+      "title": "Resume Parsing",
+      "description": "Upload your resume and let AI analyze your skills and experience"
+    },
+    "mockInterviews": {
+      "title": "Mock Interviews",
+      "description": "Practice with realistic AI-powered interview simulations"
+    },
+    "codeAssessment": {
+      "title": "Code Assessment",
+      "description": "Real-time code evaluation with instant feedback"
+    },
+    "aiAnalysis": {
+      "title": "AI Analysis",
+      "description": "Get detailed insights and improvement suggestions"
+    }
+  },
+  "socialProof": {
+    "title": "Trusted by Developers Worldwide",
+    "subtitle": "Join thousands of successful candidates"
+  },
+  "footer": {
+    "description": "AI-powered interview preparation platform",
+    "product": "Product",
+    "resources": "Resources",
+    "company": "Company",
+    "legal": "Legal",
+    "copyright": "© {year} Interview Lab. All rights reserved."
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signingIn": "Signing in...",
+    "creatingAccount": "Creating account...",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithGithub": "Continue with GitHub",
+    "orContinueWith": "Or continue with email",
+    "welcomeBack": "Welcome Back",
+    "welcomeBackDesc": "Sign in to continue your interview practice",
+    "createAccount": "Create Account",
+    "createAccountDesc": "Sign up to start your interview practice journey",
+    "loginSuccess": "Login successful!",
+    "registerSuccess": "Registration successful, please verify your email",
+    "loginError": "An error occurred during login, please try again",
+    "registerError": "An error occurred during registration, please try again",
+    "oauthError": "Third-party login failed, please try again",
+    "fillAllFields": "Please fill in all fields",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "artwork": {
+      "title": "Master Your Next Interview",
+      "description": "AI-powered practice sessions, real-time feedback, and personalized improvement plans",
+      "feature1": "Advanced AI conversation analysis",
+      "feature2": "Industry-specific question banks",
+      "feature3": "Real-time performance insights",
+      "feature4": "Personalized improvement roadmaps"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "home": "Home",
+    "welcome": "Hello, Developer",
+    "welcomeDesc": "Ready to practice for your next interview?",
+    "recentActivity": "Recent Activity",
+    "recentHistory": "Recent History",
+    "quickStart": "Quick Start",
+    "startInterview": "Start Interview",
+    "viewProfile": "View Profile",
+    "resumeIntelligence": "Resume Intelligence",
+    "sidebar": {
+      "brand": "Interview Lab",
+      "dashboard": "Dashboard",
+      "profile": "Profile",
+      "history": "History",
+      "settings": "Settings"
+    },
+    "simulation": {
+      "title": "Start Interview Simulation",
+      "description": "Configure your settings to begin",
+      "topic": "Topic",
+      "selectTopic": "Select topic",
+      "difficulty": "Difficulty",
+      "selectDifficulty": "Select difficulty",
+      "startButton": "Start Simulation",
+      "topics": {
+        "frontend": "Frontend Developer",
+        "backend": "Backend Developer",
+        "fullstack": "Full Stack Developer",
+        "mobile": "Mobile Developer"
+      },
+      "difficulties": {
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced",
+        "expert": "Expert"
+      }
+    },
+    "stats": {
+      "totalInterviews": "TOTAL INTERVIEWS",
+      "avgScore": "AVG. SCORE",
+      "studyTime": "STUDY TIME"
+    },
+    "table": {
+      "date": "Date",
+      "role": "Role",
+      "score": "Score",
+      "status": "Status",
+      "completed": "completed",
+      "pending": "pending"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "persona": {
+      "nickname": "Nickname",
+      "level": "Level {level}: {title}",
+      "levelTitle": "Senior Candidate",
+      "account": "Account",
+      "notifications": "Notifications",
+      "theme": "Theme"
+    },
+    "resume": {
+      "autoParseTitle": "Auto-Parse Your Resume",
+      "autoParseDesc": "Drag & drop your PDF resume here to extract professional details automatically",
+      "chooseFile": "Choose File",
+      "professionalDetails": "Professional Details",
+      "targetRole": "Target Role",
+      "yearsOfExperience": "Years of Experience",
+      "techStack": "Tech Stack & Skills",
+      "typeSkillHint": "Type a skill and press Enter",
+      "pressEnterHint": "Press Enter to add a new skill",
+      "workExperience": "Work & Project Experience",
+      "addExperience": "Add Experience",
+      "roles": {
+        "frontend": "Frontend Engineer",
+        "backend": "Backend Engineer",
+        "fullstack": "Full Stack Engineer",
+        "devops": "DevOps Engineer",
+        "mobile": "Mobile Developer"
+      },
+      "present": "Present"
+    }
+  },
+  "interview": {
+    "title": "Interview Session",
+    "start": "Start Interview",
+    "end": "End",
+    "pause": "Pause",
+    "resume": "Resume",
+    "feedback": "Feedback",
+    "transcript": "Transcript",
+    "timeElapsed": "Time Elapsed",
+    "speaking": "Speaking...",
+    "listening": "Listening...",
+    "typeResponse": "Type your response...",
+    "aiInterviewer": "AI Interviewer",
+    "you": "You",
+    "problem": "Problem {number}",
+    "example": "Example",
+    "showHint": "Show Hint",
+    "terminal": "Terminal / Output",
+    "showTerminal": "Show Terminal",
+    "executionCompleted": "Execution completed in {time}"
+  },
+  "language": {
+    "switch": "Language",
+    "zh": "中文",
+    "en": "English"
+  }
+}

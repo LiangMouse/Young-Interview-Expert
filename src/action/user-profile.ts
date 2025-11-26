@@ -20,7 +20,6 @@ export async function getOrCreateUserProfile(
     if (selectError && selectError.code !== "PGRST116") {
       // PGRST116 表示没有找到记录，这不是一个需要抛出的错误
       console.error("Error fetching user profile:", selectError);
-      throw selectError;
     }
 
     if (existingProfile) {
@@ -40,13 +39,26 @@ export async function getOrCreateUserProfile(
       .single();
 
     if (insertError) {
+      // 如果是唯一约束冲突（用户已存在但查询失败），尝试再次查询
+      if (insertError.code === "23505") {
+        const { data: retryProfile } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+        if (retryProfile) {
+          return retryProfile;
+        }
+      }
       console.error("Error creating user profile:", insertError);
-      throw insertError;
+      // 不抛出错误，返回 null，让调用者决定如何处理
+      return null;
     }
 
     return newProfile;
   } catch (error) {
     console.error("An unexpected error occurred:", error);
+    // 不抛出错误，返回 null
     return null;
   }
 }

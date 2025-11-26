@@ -4,6 +4,7 @@ import { Mic, MicOff, Keyboard, MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface ControlDockProps {
   isMicActive: boolean;
@@ -18,6 +19,8 @@ export function ControlDock({
   onMicToggle,
   onModeToggle,
 }: ControlDockProps) {
+  const t = useTranslations("interview");
+
   return (
     <div className="pointer-events-none fixed bottom-6 left-0 right-0 flex justify-center px-4">
       <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/20 bg-white/80 px-6 py-3 shadow-lg backdrop-blur-md">
@@ -57,7 +60,7 @@ export function ControlDock({
         {/* Text Input (shown when not in voice mode) */}
         {!isVoiceMode && (
           <Input
-            placeholder="Type your response..."
+            placeholder={t("typeResponse")}
             className="mx-2 h-10 w-64 border-[#E5E5E5] bg-white"
           />
         )}
@@ -72,7 +75,7 @@ export function ControlDock({
           className="h-10 rounded-full px-4 text-sm text-red-600 hover:bg-red-50 hover:text-red-700"
         >
           <X className="mr-2 h-4 w-4" />
-          End
+          {t("end")}
         </Button>
       </div>
     </div>

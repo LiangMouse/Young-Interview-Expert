@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 const activities = [
   {
     id: 1,
@@ -30,19 +34,32 @@ const activities = [
 ];
 
 export function RecentActivity() {
+  const t = useTranslations("dashboard");
+  const tTable = useTranslations("dashboard.table");
+
   return (
     <div className="rounded-lg border border-[#E5E5E5] bg-white shadow-sm">
       <div className="border-b border-[#E5E5E5] px-8 py-6">
-        <h2 className="text-xl font-light text-[#141414]">Recent History</h2>
+        <h2 className="text-xl font-light text-[#141414]">
+          {t("recentHistory")}
+        </h2>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-[#E5E5E5] text-xs uppercase tracking-wide text-[#666666]">
-              <th className="px-8 py-4 text-left font-normal">Date</th>
-              <th className="px-8 py-4 text-left font-normal">Role</th>
-              <th className="px-8 py-4 text-left font-normal">Score</th>
-              <th className="px-8 py-4 text-left font-normal">Status</th>
+              <th className="px-8 py-4 text-left font-normal">
+                {tTable("date")}
+              </th>
+              <th className="px-8 py-4 text-left font-normal">
+                {tTable("role")}
+              </th>
+              <th className="px-8 py-4 text-left font-normal">
+                {tTable("score")}
+              </th>
+              <th className="px-8 py-4 text-left font-normal">
+                {tTable("status")}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -66,7 +83,7 @@ export function RecentActivity() {
                       className={`h-1.5 w-1.5 rounded-full ${activity.status === "completed" ? "bg-[#0F3E2E]" : "bg-[#666666]"}`}
                     />
                     <span className="text-sm capitalize text-[#666666]">
-                      {activity.status}
+                      {tTable(activity.status as "completed" | "pending")}
                     </span>
                   </div>
                 </td>

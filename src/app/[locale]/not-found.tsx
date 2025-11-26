@@ -1,12 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Home } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function NotFound() {
   const router = useRouter();
+  const t = useTranslations("common");
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-purple-50 to-amber-50 flex flex-col items-center justify-center text-center p-4">
@@ -26,7 +28,7 @@ export default function NotFound() {
             className="rounded-full"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            返回上一页
+            {t("back")}
           </Button>
           <Link href="/">
             <Button className=" black rounded-full">
