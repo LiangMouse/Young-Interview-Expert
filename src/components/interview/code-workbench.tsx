@@ -14,7 +14,7 @@ export function CodeWorkbench() {
   const [isConsoleExpanded, setIsConsoleExpanded] = useState(true);
 
   return (
-    <div className="flex w-full flex-col overflow-hidden bg-[#1E1E20] lg:w-[60%]">
+    <div className="flex w-full h-full flex-col overflow-hidden bg-[#1E1E20]">
       <div className="border-b border-l border-[#333333] bg-[#252527]">
         <div
           className="flex cursor-pointer items-center justify-between px-4 py-3"

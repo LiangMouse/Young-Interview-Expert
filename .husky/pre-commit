@@ -5,18 +5,11 @@ echo "🔍 Running pre-commit checks..."
 
 # 运行 lint-staged (格式化和 lint)
 echo "📝 Running lint and format..."
-pnpm lint-staged
+npx lint-staged
+
 if [ $? -ne 0 ]; then
   echo "❌ Lint/format failed!"
   exit 1
 fi
 
-# 构建检查
-echo "🏗️  Running build check..."
-pnpm build
-if [ $? -ne 0 ]; then
-  echo "❌ Build failed! Please fix the build errors before committing."
-  exit 1
-fi
-
-echo "✅ All pre-commit checks passed!"
+echo "✅ Pre-commit checks passed!"

@@ -1,6 +1,15 @@
 "use client";
 
-import { Mic, MicOff, Keyboard, MessageSquare, X } from "lucide-react";
+import { useRef } from "react";
+import { motion } from "framer-motion";
+import {
+  Mic,
+  MicOff,
+  Keyboard,
+  MessageSquare,
+  X,
+  GripVertical,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -20,10 +29,27 @@ export function ControlDock({
   onModeToggle,
 }: ControlDockProps) {
   const t = useTranslations("interview");
+  const constraintsRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="pointer-events-none fixed bottom-6 left-0 right-0 flex justify-center px-4">
-      <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/20 bg-white/80 px-6 py-3 shadow-lg backdrop-blur-md">
+    <div
+      ref={constraintsRef}
+      className="pointer-events-none absolute inset-0 z-50 cursor-grab"
+    >
+      <motion.div
+        drag
+        dragMomentum={false}
+        dragElastic={0.1}
+        dragConstraints={constraintsRef}
+        initial={{ x: "-50%", y: 0 }}
+        className="pointer-events-auto absolute bottom-6 left-1/2 flex cursor-grab items-center gap-2 rounded-full border border-white/20 bg-white/80 px-2 py-3 shadow-lg backdrop-blur-md active:cursor-grabbing"
+        whileDrag={{ scale: 1.02, boxShadow: "0 10px 40px rgba(0,0,0,0.15)" }}
+      >
+        {/* Drag Handle */}
+        <div className="flex h-10 w-6 items-center justify-center text-gray-400">
+          <GripVertical className="h-4 w-4" />
+        </div>
+
         {/* Mic Toggle - Prominent emerald circle when active */}
         <Button
           variant="ghost"
@@ -32,7 +58,7 @@ export function ControlDock({
           className={cn(
             "h-10 w-10 rounded-full p-0 transition-all",
             isMicActive
-              ? "bg-[#10B981] text-white hover:bg-[#10B981]/90 shadow-md"
+              ? "bg-[#10B981] text-white shadow-md hover:bg-[#10B981]/90"
               : "text-[#666666] hover:bg-gray-100 hover:text-[#141414]",
           )}
         >
@@ -77,7 +103,12 @@ export function ControlDock({
           <X className="mr-2 h-4 w-4" />
           {t("end")}
         </Button>
-      </div>
+
+        {/* Drag Handle (right) */}
+        <div className="flex h-10 w-6 items-center justify-center text-gray-400">
+          <GripVertical className="h-4 w-4" />
+        </div>
+      </motion.div>
     </div>
   );
 }

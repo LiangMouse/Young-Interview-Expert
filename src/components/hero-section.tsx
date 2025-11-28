@@ -101,21 +101,17 @@ export function HeroSection() {
 
           {/* Visual Element */}
           <div className="relative flex items-center justify-center lg:justify-end">
-            <div className="relative w-full max-w-xl lg:max-w-none">
-              {/* Main visual */}
-              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-border/50 shadow-2xl shadow-black/10">
+            <div className="relative">
+              {/* Main visual placeholder */}
+              <div className="relative aspect-square w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-background to-accent/10 p-8 shadow-2xl">
                 <Image
                   src="/abstract-tech-ai-interview-dashboard-with-code-and.jpg"
                   alt="AI Interview Platform"
                   fill
-                  className="object-cover"
+                  className="rounded-xl object-cover"
                   priority
                 />
-                {/* Overlay gradient for polish */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
               </div>
-              {/* Decorative elements */}
-              <div className="absolute -bottom-4 -right-4 -z-10 h-full w-full rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 blur-sm" />
             </div>
           </div>
         </div>
