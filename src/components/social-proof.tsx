@@ -1,7 +1,10 @@
 import { Star, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useTranslations } from "next-intl";
 
 export function SocialProof() {
+  const t = useTranslations("socialProof");
+
   return (
     <section className="py-16 lg:py-24">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -46,12 +49,12 @@ export function SocialProof() {
                   ))}
                 </div>
                 <p className="text-2xl font-bold text-card-foreground">
-                  Helped <span className="text-primary">10,000+</span> students
-                  get offers
+                  {t("helped")} <span className="text-primary">10,000+</span>{" "}
+                  {t("students")}
+                  <br className="sm:hidden" /> {t("getOffers")}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Join thousands of successful candidates who landed their dream
-                  jobs
+                  {t("description")}
                 </p>
               </div>
             </div>
@@ -65,14 +68,18 @@ export function SocialProof() {
                     50+
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground">Top Companies</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("topCompanies")}
+                </p>
               </div>
               <div className="h-16 w-px bg-border" />
               <div className="text-center">
                 <div className="mb-1 text-3xl font-bold text-card-foreground">
                   4.9/5
                 </div>
-                <p className="text-sm text-muted-foreground">Average Rating</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("averageRating")}
+                </p>
               </div>
             </div>
           </div>

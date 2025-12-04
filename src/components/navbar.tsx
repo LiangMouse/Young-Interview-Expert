@@ -2,9 +2,9 @@
 
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import Image from "next/image";
 
 export function Navbar() {
   const t = useTranslations("nav");
@@ -15,9 +15,13 @@ export function Navbar() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2 transition-opacity">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary">
-              <Sparkles className="size-5 text-primary-foreground" />
-            </div>
+            <Image
+              src="/favicon.png"
+              alt="Logo"
+              width={36}
+              height={36}
+              className="size-9 rounded-lg"
+            />
             <span className="text-lg font-semibold tracking-tight text-foreground">
               {t("projectName")}
             </span>

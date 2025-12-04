@@ -41,35 +41,53 @@
   },
   "features": {
     "title": "成功所需的一切",
-    "subtitle": "我们的 AI 驱动平台提供全面的面试准备工具",
-    "resumeParsing": {
-      "title": "简历解析",
-      "description": "上传您的简历，让 AI 分析您的技能和经验"
-    },
-    "mockInterviews": {
-      "title": "模拟面试",
-      "description": "通过逼真的 AI 驱动面试模拟进行练习"
-    },
-    "codeAssessment": {
-      "title": "代码评估",
-      "description": "实时代码评估，即时反馈"
-    },
-    "aiAnalysis": {
-      "title": "AI 分析",
-      "description": "获取详细见解和改进建议"
+    "subtitle": "我们的 AI 驱动平台提供全面的面试准备工具，帮助您掌握技术面试并获得理想工作。",
+    "items": {
+      "resumeAnalysis": {
+        "title": "深度简历分析",
+        "description": "AI 驱动的简历解析，识别您资料中的优势和不足，并提供个性化的改进建议。"
+      },
+      "multiMode": {
+        "title": "多模式面试",
+        "description": "练习语音或文字面试。自适应 AI 根据您的表现和学习进度调整难度。"
+      },
+      "smartScoring": {
+        "title": "智能评分报告",
+        "description": "详细的实时反馈和性能分析。跟踪您在技术技能、沟通和问题解决方面的进度。"
+      },
+      "codeAssessment": {
+        "title": "实时代码评估",
+        "description": "模拟面试中的实时代码评估，包括语法检查、最佳实践分析和优化建议。"
+      },
+      "voiceMode": {
+        "title": "语音面试模式",
+        "description": "具有语音识别功能的自然对话流。像真实面试一样练习您的口头沟通技巧。"
+      },
+      "achievement": {
+        "title": "成就系统",
+        "description": "通过里程碑、徽章和进度跟踪保持动力。用切实的奖励庆祝您的进步之旅。"
+      }
     }
   },
   "socialProof": {
-    "title": "全球开发者信赖",
-    "subtitle": "加入数千名成功候选人的行列"
+    "helped": "已帮助",
+    "students": "名学员",
+    "getOffers": "拿到 Offer",
+    "description": "加入数千名成功入职理想公司的候选人行列",
+    "topCompanies": "顶尖企业",
+    "averageRating": "平均评分"
   },
   "footer": {
-    "description": "AI 驱动的面试准备平台",
+    "brandDesc": "AI 驱动的面试准备平台，帮助技术专业人士入职理想工作。",
     "product": "产品",
-    "resources": "资源",
+    "features": "功能",
+    "pricing": "价格",
+    "testimonials": "学员评价",
     "company": "公司",
-    "legal": "法律",
-    "copyright": "© {year} Interview Lab. 保留所有权利。"
+    "about": "关于",
+    "blog": "博客",
+    "contact": "联系我们",
+    "rights": "保留所有权利。"
   },
   "auth": {
     "signIn": "登录",

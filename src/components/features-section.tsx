@@ -13,64 +13,60 @@ import {
   Code,
   Award,
 } from "lucide-react";
-
-const features = [
-  {
-    icon: FileText,
-    title: "Deep Resume Analysis",
-    description:
-      "AI-powered resume parsing that identifies strengths and gaps in your profile, with personalized recommendations for improvement.",
-    gradient: "from-primary/20 to-primary/5",
-  },
-  {
-    icon: MessageSquare,
-    title: "Multi-Mode Interview",
-    description:
-      "Practice with voice or text-based interviews. Adaptive AI adjusts difficulty based on your performance and learning pace.",
-    gradient: "from-accent/20 to-accent/5",
-  },
-  {
-    icon: Activity,
-    title: "Smart Scoring Report",
-    description:
-      "Detailed performance analytics with real-time feedback. Track your progress across technical skills, communication, and problem-solving.",
-    gradient: "from-primary/20 to-accent/10",
-  },
-  {
-    icon: Code,
-    title: "Live Code Assessment",
-    description:
-      "Real-time code evaluation with syntax checking, best practices analysis, and optimization suggestions during mock interviews.",
-    gradient: "from-accent/20 to-primary/10",
-  },
-  {
-    icon: Mic,
-    title: "Voice Interview Mode",
-    description:
-      "Natural conversation flow with speech recognition. Practice your verbal communication skills just like a real interview.",
-    gradient: "from-primary/15 to-accent/15",
-  },
-  {
-    icon: Award,
-    title: "Achievement System",
-    description:
-      "Stay motivated with milestones, badges, and progress tracking. Celebrate your improvement journey with tangible rewards.",
-    gradient: "from-accent/20 to-primary/5",
-  },
-];
+import { useTranslations } from "next-intl";
 
 export function FeaturesSection() {
+  const t = useTranslations("features");
+
+  const features = [
+    {
+      icon: FileText,
+      title: t("items.resumeAnalysis.title"),
+      description: t("items.resumeAnalysis.description"),
+      gradient: "from-primary/20 to-primary/5",
+    },
+    {
+      icon: MessageSquare,
+      title: t("items.multiMode.title"),
+      description: t("items.multiMode.description"),
+      gradient: "from-accent/20 to-accent/5",
+    },
+    {
+      icon: Activity,
+      title: t("items.smartScoring.title"),
+      description: t("items.smartScoring.description"),
+      gradient: "from-primary/20 to-accent/10",
+    },
+    {
+      icon: Code,
+      title: t("items.codeAssessment.title"),
+      description: t("items.codeAssessment.description"),
+      gradient: "from-accent/20 to-primary/10",
+    },
+    {
+      icon: Mic,
+      title: t("items.voiceMode.title"),
+      description: t("items.voiceMode.description"),
+      gradient: "from-primary/15 to-accent/15",
+    },
+    {
+      icon: Award,
+      title: t("items.achievement.title"),
+      description: t("items.achievement.description"),
+      gradient: "from-accent/20 to-primary/5",
+    },
+  ];
+
   return (
     <section id="features" className="py-20 lg:py-32">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         {/* Section Header */}
         <div className="mb-16 text-center">
           <h2 className="mb-4 text-balance text-3xl font-bold tracking-tight text-foreground lg:text-4xl xl:text-5xl">
-            Everything You Need to <span className="text-primary">Succeed</span>
+            {t("title")}
           </h2>
           <p className="mx-auto max-w-2xl text-pretty text-lg text-muted-foreground">
-            Comprehensive tools designed to help you master technical interviews
-            and land your dream job.
+            {t("subtitle")}
           </p>
         </div>
 

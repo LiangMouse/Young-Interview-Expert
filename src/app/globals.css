@@ -4,75 +4,107 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Monochrome Warm Theme */
+  /* Background: 米白色 #FDFCF8 -> hsl(48, 33%, 98%) */
+  --background: hsl(48 33% 98%);
+  /* Foreground: Deep dark for text, keeping it readable. */
+  --foreground: hsl(160 60% 10%);
+
+  /* Cards: White to stand out on the warm background */
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(160 60% 10%);
+
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(160 60% 10%);
+
+  /* Primary: 深墨绿 #0F3E2E -> hsl(159, 61%, 15%) */
+  --primary: hsl(159 61% 15%);
+  --primary-foreground: hsl(0 0% 100%);
+
+  /* Secondary: Lighter warm gray/green for secondary actions */
+  --secondary: hsl(160 10% 94%);
+  --secondary-foreground: hsl(159 61% 15%);
+
+  /* Muted: For subtle text/backgrounds */
+  --muted: hsl(160 10% 94%);
+  --muted-foreground: hsl(160 10% 45%);
+
+  /* Accent: 亮翠绿 #059669 -> hsl(161, 94%, 30%) */
+  /* Used for icon backgrounds as requested */
+  --accent: hsl(161 94% 30%);
+  --accent-foreground: hsl(0 0% 100%);
+
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+
+  --border: hsl(160 10% 90%);
+  --input: hsl(160 10% 90%);
+  --ring: hsl(159 61% 15%);
+
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --sidebar: hsl(48 33% 98%);
+  --sidebar-foreground: hsl(160 60% 10%);
+  --sidebar-primary: hsl(159 61% 15%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(161 94% 30%);
+  --sidebar-accent-foreground: hsl(0 0% 100%);
+  --sidebar-border: hsl(160 10% 90%);
+  --sidebar-ring: hsl(159 61% 15%);
 }
 
 .dark {
-  /* Custom dark theme with emerald primary (growth) and violet accent (AI) */
-  --background: hsl(222.2 84% 4.9%);
-  --foreground: hsl(210 40% 98%);
-  --card: hsl(222.2 84% 4.9%);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: hsl(222.2 84% 4.9%);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: hsl(210 40% 98%);
-  --primary-foreground: oklch(0.1 0 0);
-  --secondary: hsl(217.2 32.6% 17.5%);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: hsl(217.2 32.6% 17.5%);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: hsl(217.2 32.6% 17.5%);
-  --accent-foreground: oklch(0.98 0 0);
+  /* Dark mode adaptation: Deep greens and darker backgrounds */
+  --background: hsl(160 40% 5%);
+  --foreground: hsl(48 20% 96%);
+
+  --card: hsl(160 40% 8%);
+  --card-foreground: hsl(48 20% 96%);
+
+  --popover: hsl(160 40% 8%);
+  --popover-foreground: hsl(48 20% 96%);
+
+  --primary: hsl(
+    161 94% 30%
+  ); /* Use the brighter emerald for primary in dark mode for contrast */
+  --primary-foreground: hsl(0 0% 100%);
+
+  --secondary: hsl(160 30% 15%);
+  --secondary-foreground: hsl(0 0% 98%);
+
+  --muted: hsl(160 30% 15%);
+  --muted-foreground: hsl(160 20% 65%);
+
+  --accent: hsl(159 61% 15%); /* Darker ink green as accent in dark mode */
+  --accent-foreground: hsl(0 0% 98%);
+
   --destructive: hsl(0 62.8% 30.6%);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: hsl(217.2 32.6% 17.5%);
-  --input: hsl(217.2 32.6% 17.5%);
-  --ring: hsl(212.7 26.8% 83.9%);
+
+  --border: hsl(160 30% 15%);
+  --input: hsl(160 30% 15%);
+  --ring: hsl(161 94% 30%);
+
   --chart-1: hsl(220 70% 50%);
   --chart-2: hsl(160 60% 45%);
   --chart-3: hsl(30 80% 55%);
   --chart-4: hsl(280 65% 60%);
   --chart-5: hsl(340 75% 55%);
-  --sidebar: hsl(240 5.9% 10%);
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.65 0.18 165);
-  --sidebar-primary-foreground: oklch(0.1 0 0);
-  --sidebar-accent: oklch(0.2 0 0);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(0.22 0 0);
-  --sidebar-ring: oklch(0.55 0.15 165);
+
+  --sidebar: hsl(160 40% 5%);
+  --sidebar-foreground: hsl(48 20% 96%);
+  --sidebar-primary: hsl(161 94% 30%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(159 61% 15%);
+  --sidebar-accent-foreground: hsl(0 0% 98%);
+  --sidebar-border: hsl(160 30% 15%);
+  --sidebar-ring: hsl(161 94% 30%);
 }
 
 @theme inline {

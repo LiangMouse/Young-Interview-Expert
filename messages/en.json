@@ -41,35 +41,53 @@
   },
   "features": {
     "title": "Everything You Need to Succeed",
-    "subtitle": "Our AI-powered platform provides comprehensive interview preparation tools",
-    "resumeParsing": {
-      "title": "Resume Parsing",
-      "description": "Upload your resume and let AI analyze your skills and experience"
-    },
-    "mockInterviews": {
-      "title": "Mock Interviews",
-      "description": "Practice with realistic AI-powered interview simulations"
-    },
-    "codeAssessment": {
-      "title": "Code Assessment",
-      "description": "Real-time code evaluation with instant feedback"
-    },
-    "aiAnalysis": {
-      "title": "AI Analysis",
-      "description": "Get detailed insights and improvement suggestions"
+    "subtitle": "Comprehensive tools designed to help you master technical interviews and land your dream job.",
+    "items": {
+      "resumeAnalysis": {
+        "title": "Deep Resume Analysis",
+        "description": "AI-powered resume parsing that identifies strengths and gaps in your profile, with personalized recommendations for improvement."
+      },
+      "multiMode": {
+        "title": "Multi-Mode Interview",
+        "description": "Practice with voice or text-based interviews. Adaptive AI adjusts difficulty based on your performance and learning pace."
+      },
+      "smartScoring": {
+        "title": "Smart Scoring Report",
+        "description": "Detailed performance analytics with real-time feedback. Track your progress across technical skills, communication, and problem-solving."
+      },
+      "codeAssessment": {
+        "title": "Live Code Assessment",
+        "description": "Real-time code evaluation with syntax checking, best practices analysis, and optimization suggestions during mock interviews."
+      },
+      "voiceMode": {
+        "title": "Voice Interview Mode",
+        "description": "Natural conversation flow with speech recognition. Practice your verbal communication skills just like a real interview."
+      },
+      "achievement": {
+        "title": "Achievement System",
+        "description": "Stay motivated with milestones, badges, and progress tracking. Celebrate your improvement journey with tangible rewards."
+      }
     }
   },
   "socialProof": {
-    "title": "Trusted by Developers Worldwide",
-    "subtitle": "Join thousands of successful candidates"
+    "helped": "Helped",
+    "students": "students",
+    "getOffers": "get offers",
+    "description": "Join thousands of successful candidates who landed their dream jobs",
+    "topCompanies": "Top Companies",
+    "averageRating": "Average Rating"
   },
   "footer": {
-    "description": "AI-powered interview preparation platform",
+    "brandDesc": "AI-powered interview preparation platform helping tech professionals land their dream jobs.",
     "product": "Product",
-    "resources": "Resources",
+    "features": "Features",
+    "pricing": "Pricing",
+    "testimonials": "Testimonials",
     "company": "Company",
-    "legal": "Legal",
-    "copyright": "© {year} Interview Lab. All rights reserved."
+    "about": "About",
+    "blog": "Blog",
+    "contact": "Contact",
+    "rights": "All rights reserved."
   },
   "auth": {
     "signIn": "Sign In",

@@ -1,7 +1,10 @@
 import { Link } from "@/i18n/navigation";
 import { Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function Footer() {
+  const t = useTranslations("footer");
+
   return (
     <footer className="border-t border-border bg-background">
       <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
@@ -17,15 +20,14 @@ export function Footer() {
               </span>
             </Link>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
-              AI-powered interview preparation platform helping tech
-              professionals land their dream jobs.
+              {t("brandDesc")}
             </p>
           </div>
 
           {/* Links */}
           <div>
             <h3 className="mb-4 text-sm font-semibold text-foreground">
-              Product
+              {t("product")}
             </h3>
             <ul className="space-y-3">
               <li>
@@ -33,7 +35,7 @@ export function Footer() {
                   href="#features"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  Features
+                  {t("features")}
                 </Link>
               </li>
               <li>
@@ -41,7 +43,7 @@ export function Footer() {
                   href="#pricing"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  Pricing
+                  {t("pricing")}
                 </Link>
               </li>
               <li>
@@ -49,7 +51,7 @@ export function Footer() {
                   href="#"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  Testimonials
+                  {t("testimonials")}
                 </Link>
               </li>
             </ul>
@@ -57,7 +59,7 @@ export function Footer() {
 
           <div>
             <h3 className="mb-4 text-sm font-semibold text-foreground">
-              Company
+              {t("company")}
             </h3>
             <ul className="space-y-3">
               <li>
@@ -65,7 +67,7 @@ export function Footer() {
                   href="#about"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  About
+                  {t("about")}
                 </Link>
               </li>
               <li>
@@ -73,7 +75,7 @@ export function Footer() {
                   href="#"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  Blog
+                  {t("blog")}
                 </Link>
               </li>
               <li>
@@ -81,7 +83,7 @@ export function Footer() {
                   href="#"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  Contact
+                  {t("contact")}
                 </Link>
               </li>
             </ul>
@@ -91,8 +93,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 border-t border-border pt-8">
           <p className="text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Young Interview Expert. All rights
-            reserved.
+            © {new Date().getFullYear()} Interview Lab. {t("rights")}
           </p>
         </div>
       </div>
