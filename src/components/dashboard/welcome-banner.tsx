@@ -1,14 +1,16 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useUserStore } from "@/store/user";
 
 export function WelcomeBanner() {
   const t = useTranslations("dashboard");
+  const { userInfo } = useUserStore();
 
   return (
     <div className="space-y-2">
       <h1 className="text-3xl font-light text-[#141414] lg:text-4xl">
-        {t("welcome")}
+        {t("welcome")} {userInfo?.nickname || "用户"}
       </h1>
       <p className="text-base text-[#666666]">{t("welcomeDesc")}</p>
     </div>

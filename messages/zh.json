@@ -40,7 +40,7 @@
     }
   },
   "features": {
-    "title": "成功所需的一切",
+    "title": "面试成功所需的一切",
     "subtitle": "我们的 AI 驱动平台提供全面的面试准备工具，帮助您掌握技术面试并获得理想工作。",
     "items": {
       "resumeAnalysis": {
@@ -128,7 +128,7 @@
   "dashboard": {
     "title": "控制台",
     "home": "首页",
-    "welcome": "你好，开发者",
+    "welcome": "你好，",
     "welcomeDesc": "准备好练习你的下一次面试了吗？",
     "recentActivity": "最近活动",
     "recentHistory": "最近记录",
