@@ -1,5 +1,10 @@
 import type { UserProfile } from "@/types/profile";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
+import { OpenAIEmbeddings } from "@langchain/openai";
+import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
+import { Document } from "@langchain/core/documents";
+// @ts-expect-error - keyword-extractor 没有类型定义
+import keywordExtractor from "keyword-extractor";
 import {
   sanitizeProfileData,
   sanitizeRAGQuery,
@@ -156,77 +161,119 @@ export async function profileToVectorDocuments(
 }
 
 /**
- * 存储向量文档到Supabase pgvector
+ * 存储向量文档到Supabase pgvector（使用SupabaseVectorStore）
+ * 这里先清理该用户的所有旧向量，再插入新向量，确保数据一致性
  */
 export async function storeVectorDocuments(
   documents: VectorDocument[],
   userId: string,
 ): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
+  const embeddings = getEmbeddings();
 
-  // 为每个文档添加用户ID到元数据
-  const documentsWithUserId = documents.map((doc) => ({
-    ...doc,
-    metadata: {
-      ...doc.metadata,
-      user_id: userId,
-    },
-  }));
+  try {
+    // 先删除该用户的所有旧向量
+    // 使用 RPC 函数清理（如果存在），否则使用直接删除
+    const { error: clearError } = await supabase.rpc(
+      "clear_user_profile_vectors",
+      {
+        p_user_id: userId,
+      },
+    );
 
-  // 生成所有文档的向量嵌入
-  const documentsWithEmbeddings = await Promise.all(
-    documentsWithUserId.map(async (doc) => {
-      const embedding = await generateEmbedding(doc.content);
-      return {
-        id: doc.id,
-        content: doc.content,
-        metadata: doc.metadata,
-        embedding: embedding,
-      };
-    }),
-  );
+    // 如果 RPC 不存在，使用直接删除（需要表支持 JSONB 查询）
+    if (clearError) {
+      console.warn(
+        "RPC clear_user_profile_vectors 不存在，尝试直接删除:",
+        clearError.message,
+      );
+      // 备用方案：直接删除（假设表结构支持）
+      const { error: deleteError } = await supabase
+        .from("user_profile_vectors")
+        .delete()
+        .eq("user_id", userId);
 
-  // 使用RPC函数批量存储
-  const { error } = await supabase.rpc("upsert_user_profile_vectors", {
-    p_documents: documentsWithEmbeddings,
-  });
+      if (deleteError) {
+        console.warn("直接删除也失败（继续插入新向量）:", deleteError.message);
+      }
+    }
 
-  if (error) {
+    // 转换为LangChain Document格式
+    const langchainDocs = documents.map(
+      (doc) =>
+        new Document({
+          pageContent: doc.content,
+          metadata: {
+            ...doc.metadata,
+            user_id: userId,
+            doc_id: doc.id,
+          },
+        }),
+    );
+
+    // 使用SupabaseVectorStore自动处理embedding和存储
+    // 批量生成embedding并插入（LangChain自动处理）
+    await SupabaseVectorStore.fromDocuments(langchainDocs, embeddings, {
+      client: supabase,
+      tableName: "user_profile_vectors",
+      queryName: "match_user_profile_vectors",
+    });
+  } catch (error) {
     console.error("Error storing vector documents:", error);
     throw error;
   }
 }
 
 /**
- * 基于查询检索相关文档
+ * 基于查询检索相关文档（使用SupabaseVectorStore）
  */
 export async function retrieveRelevantDocuments(
   query: string,
   userId: string,
   limit: number = 5,
 ): Promise<VectorDocument[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
+  const embeddings = getEmbeddings();
 
-  // 清理查询文本，防止注入
-  const sanitizedQuery = sanitizeRAGQuery(query);
+  try {
+    // 清理查询文本，防止注入
+    const sanitizedQuery = sanitizeRAGQuery(query);
 
-  // 生成查询向量
-  const queryEmbedding = await generateEmbedding(sanitizedQuery);
+    // 初始化向量存储
+    const vectorStore = new SupabaseVectorStore(embeddings, {
+      client: supabase,
+      tableName: "user_profile_vectors",
+      queryName: "match_user_profile_vectors",
+    });
 
-  // 使用pgvector进行相似度搜索
-  const { data, error } = await supabase.rpc("match_user_profile_vectors", {
-    query_embedding: queryEmbedding,
-    user_id: userId,
-    match_threshold: 0.7,
-    match_count: limit,
-  });
+    // 执行相似度搜索（自动生成embedding）
+    // 注意：SupabaseVectorStore 的 similaritySearch 不支持 metadata 过滤
+    // 我们需要先搜索，然后过滤结果
+    const results = await vectorStore.similaritySearch(
+      sanitizedQuery,
+      limit * 2,
+    );
 
-  if (error) {
+    // 过滤出该用户的文档并按相关性排序
+    const userResults = results
+      .filter((doc) => doc.metadata.user_id === userId)
+      .slice(0, limit);
+
+    // 转换回VectorDocument格式
+    return userResults.map((doc) => ({
+      id: doc.metadata.doc_id || "",
+      content: doc.pageContent,
+      metadata: {
+        type: doc.metadata.type as VectorDocument["metadata"]["type"],
+        source: doc.metadata.source as string,
+        importance: (doc.metadata.importance as number) || 0.5,
+        keywords: (doc.metadata.keywords as string[]) || [],
+      },
+    }));
+  } catch (error) {
     console.error("Error retrieving documents:", error);
     throw error;
   }
-
-  return data || [];
 }
 
 /**
@@ -236,12 +283,12 @@ export function generateIntelligentAnalysisPrompt(context: RAGContext): string {
   const { relevantDocuments } = context;
 
   // 清理文档内容，防止注入
-  const sanitizedDocuments = relevantDocuments.map((doc) => ({
+  const sanitizedDocuments = relevantDocuments.map((doc: VectorDocument) => ({
     ...doc,
     content: escapePromptContent(doc.content),
     metadata: {
       ...doc.metadata,
-      keywords: doc.metadata.keywords.map((keyword) =>
+      keywords: doc.metadata.keywords.map((keyword: string) =>
         escapePromptContent(keyword),
       ),
     },
@@ -308,6 +355,7 @@ ${doc.content}
 
 /**
  * 调用AI进行智能分析
+ * 直接使用 LangChain 调用 AI 模型，避免额外的 API 层
  */
 export async function performIntelligentAnalysis(
   context: RAGContext,
@@ -315,22 +363,39 @@ export async function performIntelligentAnalysis(
   const analysisPrompt = generateIntelligentAnalysisPrompt(context);
 
   try {
-    const response = await fetch("/api/ai-analysis", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt: analysisPrompt,
-        context: context,
-      }),
+    // 直接使用 LangChain 调用 AI，而不是通过额外的 API 层
+    const { ChatOpenAI } = await import("@langchain/openai");
+    const { z } = await import("zod");
+
+    const analysisSchema = z.object({
+      candidateAnalysis: z.string().describe("候选人能力画像分析"),
+      interviewStrategy: z.string().describe("个性化面试策略"),
+      nextQuestion: z.string().describe("下一个最重要的单个问题"),
+      riskPoints: z.array(z.string()).describe("需要注意的风险点"),
+      questionRationale: z.string().describe("为什么选择这个问题的理由"),
     });
 
-    if (!response.ok) {
-      throw new Error(`Analysis API error: ${response.status}`);
-    }
+    const model = new ChatOpenAI({
+      model: "deepseek-chat",
+      temperature: 0.7,
+      apiKey: process.env.DEEPSEEK_V3_API,
+      configuration: {
+        baseURL: "https://api.deepseek.com/v1",
+      },
+    }).withStructuredOutput(analysisSchema);
 
-    const result = await response.json();
+    const result = await model.invoke([
+      {
+        role: "system",
+        content:
+          "你是一位资深的AI面试官，擅长分析候选人背景并制定个性化面试策略。",
+      },
+      {
+        role: "user",
+        content: analysisPrompt,
+      },
+    ]);
+
     return result;
   } catch (error) {
     console.error("Error performing intelligent analysis:", error);
@@ -339,44 +404,46 @@ export async function performIntelligentAnalysis(
 }
 
 /**
- * 生成文档向量嵌入
+ * 获取Embeddings实例（单例）
  */
-async function generateEmbedding(text: string): Promise<number[]> {
-  try {
-    const response = await fetch("/api/embeddings", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+let embeddingsInstance: OpenAIEmbeddings | null = null;
+
+function getEmbeddings(): OpenAIEmbeddings {
+  if (!embeddingsInstance) {
+    embeddingsInstance = new OpenAIEmbeddings({
+      modelName: "deepseek-coder",
+      openAIApiKey: process.env.DEEPSEEK_V3_API,
+      configuration: {
+        baseURL: "https://api.deepseek.com/v1",
       },
-      body: JSON.stringify({ text }),
     });
-
-    if (!response.ok) {
-      throw new Error(`Embedding API error: ${response.status}`);
-    }
-
-    const { embedding } = await response.json();
-    return embedding;
-  } catch (error) {
-    console.error("Error generating embedding:", error);
-    // 返回零向量作为fallback
-    return new Array(1536).fill(0);
   }
+  return embeddingsInstance;
 }
 
 /**
- * 提取关键词
+ * 提取关键词（使用专业库）
  */
 function extractKeywords(text: string): string[] {
-  // 简单的关键词提取逻辑，可以后续优化为更智能的NLP处理
-  const words = text
-    .toLowerCase()
-    .replace(/[^\w\s\u4e00-\u9fff]/g, " ")
-    .split(/\s+/)
-    .filter((word) => word.length > 1);
-
-  // 去重并返回
-  return [...new Set(words)];
+  try {
+    // 使用 keyword-extractor 专业库
+    const keywords = keywordExtractor.extract(text, {
+      language: "chinese",
+      remove_digits: false,
+      return_changed_case: true,
+      remove_duplicates: true,
+    });
+    return keywords.slice(0, 20); // 限制数量
+  } catch (error) {
+    console.error("Error extracting keywords:", error);
+    // fallback到简单实现
+    const words = text
+      .toLowerCase()
+      .replace(/[^\w\s\u4e00-\u9fff]/g, " ")
+      .split(/\s+/)
+      .filter((word) => word.length > 1);
+    return [...new Set(words)].slice(0, 20);
+  }
 }
 
 /**

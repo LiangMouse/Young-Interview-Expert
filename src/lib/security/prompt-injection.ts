@@ -1,32 +1,25 @@
 /**
  * 提示词注入防护工具
- * 用于检测、清理和防止用户输入中的恶意提示词注入攻击
  */
 
 /**
- * 常见提示词注入模式
+ * 核心注入模式
  */
-const INJECTION_PATTERNS = [
-  // 角色扮演类注入
-  /(?:你现在是|你现在扮演|你现在充当|你现在担任|你现在作为|你是一个|你是)/i,
-  /(?:忘记|忽略|无视|删除|清除).*?(?:指令|规则|约束|要求|提示词|prompt|system)/i,
-  /(?:忽略之前|忘记之前|删除之前|清除之前)/i,
-  /(?:新的指令|新指令|新的规则|新规则|新的系统|新系统)/i,
+const CRITICAL_INJECTION_PATTERNS = [
+  // 直接指令覆盖
+  /(?:ignore|forget|disregard)\s+(?:previous|all|above)\s+(?:instructions|prompts|rules)/i,
+  /(?:忘记|忽略|删除|清除)\s*(?:之前|以上|所有).*?(?:指令|规则|提示)/i,
 
-  // 系统指令类注入
-  /(?:system|assistant|user):\s*(?:你现在是|忽略|忘记)/i,
-  /(?:#|##)\s*(?:system|instruction|prompt|rule)/i,
+  // 角色劫持
+  /(?:you are now|now you are|act as|pretend to be)\s+(?:admin|system|root)/i,
+  /(?:你现在是|你现在扮演|你现在作为)\s*(?:管理员|系统|root)/i,
 
-  // 编码绕过尝试
-  /(?:base64|hex|unicode|url).*?(?:decode|decode|解析)/i,
+  // 系统指令注入
+  /(?:system|assistant):\s*(?:ignore|forget|你现在是)/i,
 
-  // 直接控制尝试
-  /(?:输出|显示|打印).*?(?:系统|提示词|prompt|指令)/i,
-  /(?:告诉我|显示给我|输出).*?(?:你的|系统).*?(?:提示词|指令|规则)/i,
-
-  // 多语言变体
-  /(?:你现在是|忽略|忘记)/i,
-  /(?:you are now|forget|ignore|disregard)/i,
+  // 尝试泄露系统提示
+  /(?:show|display|reveal|output)\s+(?:your|the|system)\s+(?:prompt|instruction|rule)/i,
+  /(?:显示|输出|告诉我).*?(?:系统|你的).*?(?:提示词|指令)/i,
 ];
 
 /**
@@ -41,9 +34,9 @@ export function detectInjectionAttempt(input: string): {
     return { isInjection: false, severity: "low" };
   }
 
-  const normalizedInput = input.trim();
+  const normalizedInput = input.trim().toLowerCase();
 
-  // 检查长度异常（可能是编码后的恶意内容）
+  // 检查长度异常
   if (normalizedInput.length > 10000) {
     return {
       isInjection: true,
@@ -52,14 +45,13 @@ export function detectInjectionAttempt(input: string): {
     };
   }
 
-  // 检查注入模式
-  for (const pattern of INJECTION_PATTERNS) {
-    if (pattern.test(normalizedInput)) {
-      const severity = determineSeverity(pattern, normalizedInput);
+  // 检查关键注入模式
+  for (const pattern of CRITICAL_INJECTION_PATTERNS) {
+    if (pattern.test(input)) {
       return {
         isInjection: true,
-        matchedPattern: pattern.toString(),
-        severity,
+        matchedPattern: pattern.source.substring(0, 50) + "...",
+        severity: "high",
       };
     }
   }
@@ -68,37 +60,7 @@ export function detectInjectionAttempt(input: string): {
 }
 
 /**
- * 确定注入尝试的严重程度
- */
-function determineSeverity(
-  pattern: RegExp,
-  input: string,
-): "low" | "medium" | "high" {
-  const highSeverityPatterns = [
-    /(?:忽略|忘记|删除|清除).*?(?:所有|全部|all)/i,
-    /(?:system|assistant):/i,
-    /(?:输出|显示).*?(?:系统|prompt)/i,
-  ];
-
-  for (const highPattern of highSeverityPatterns) {
-    if (highPattern.test(input)) {
-      return "high";
-    }
-  }
-
-  // 如果包含多个注入关键词，提高严重程度
-  const injectionKeywords = input.match(
-    /(?:忽略|忘记|你现在是|新指令|系统|prompt)/gi,
-  );
-  if (injectionKeywords && injectionKeywords.length >= 2) {
-    return "medium";
-  }
-
-  return "low";
-}
-
-/**
- * 清理用户输入，移除潜在的注入内容
+ * 清理用户输入
  */
 export function sanitizeUserInput(
   input: string,
@@ -115,7 +77,7 @@ export function sanitizeUserInput(
   const {
     maxLength = 5000,
     removeNewlines = false,
-    allowMarkdown = false,
+    allowMarkdown = true,
   } = options;
 
   let sanitized = input.trim();
@@ -125,52 +87,39 @@ export function sanitizeUserInput(
     sanitized = sanitized.substring(0, maxLength);
   }
 
-  // 移除可能的注入模式（保留用户意图）
-  // 注意：这里要小心，不要过度清理，以免影响正常对话
-  for (const pattern of INJECTION_PATTERNS) {
-    // 只移除明显的恶意模式，保留上下文
-    sanitized = sanitized.replace(pattern, (match) => {
-      // 如果是明显的注入尝试，移除
-      if (
-        match.toLowerCase().includes("忽略") ||
-        match.toLowerCase().includes("忘记") ||
-        match.toLowerCase().includes("ignore") ||
-        match.toLowerCase().includes("forget")
-      ) {
-        return "";
-      }
-      return match; // 保留其他可能的误匹配
-    });
+  // 移除明显的注入尝试关键词
+  const dangerousKeywords = [
+    /ignore\s+previous\s+instructions/gi,
+    /forget\s+all\s+instructions/gi,
+    /忘记所有指令/gi,
+    /忽略之前的指令/gi,
+  ];
+
+  for (const keyword of dangerousKeywords) {
+    sanitized = sanitized.replace(keyword, "[filtered]");
   }
 
-  // 移除多余的空格和换行
+  // 移除多余的空格
   sanitized = sanitized.replace(/\s+/g, " ");
 
   if (removeNewlines) {
     sanitized = sanitized.replace(/\n/g, " ");
   }
 
-  // 如果不允许 Markdown，转义 Markdown 特殊字符
+  // 如果不允许 Markdown，转义常见 Markdown 特殊字符
   if (!allowMarkdown) {
-    sanitized = escapeMarkdown(sanitized);
+    sanitized = sanitized
+      .replace(/#/g, "\\#")
+      .replace(/\*/g, "\\*")
+      .replace(/_/g, "\\_")
+      .replace(/\[/g, "\\[")
+      .replace(/\]/g, "\\]")
+      .replace(/\(/g, "\\(")
+      .replace(/\)/g, "\\)")
+      .replace(/`/g, "\\`");
   }
 
   return sanitized.trim();
-}
-
-/**
- * 转义 Markdown 特殊字符
- */
-function escapeMarkdown(text: string): string {
-  return text
-    .replace(/#/g, "\\#")
-    .replace(/\*/g, "\\*")
-    .replace(/_/g, "\\_")
-    .replace(/\[/g, "\\[")
-    .replace(/\]/g, "\\]")
-    .replace(/\(/g, "\\(")
-    .replace(/\)/g, "\\)")
-    .replace(/`/g, "\\`");
 }
 
 /**
@@ -198,41 +147,33 @@ export function escapePromptContent(content: string): string {
 
 /**
  * 清理用户消息内容
- * 这是主要的清理函数，用于处理聊天消息
  */
 export function sanitizeMessageContent(content: string): string {
   if (!content || typeof content !== "string") {
     return "";
   }
 
-  // 首先检测注入尝试
+  // 检测注入尝试
   const detection = detectInjectionAttempt(content);
 
-  if (detection.isInjection) {
-    // 记录注入尝试（在开发环境）
-    if (process.env.NODE_ENV === "development") {
-      console.warn("[安全警告] 检测到提示词注入尝试:", {
-        severity: detection.severity,
-        pattern: detection.matchedPattern,
-        content: content.substring(0, 100), // 只记录前100字符
-      });
-    }
+  if (detection.isInjection && detection.severity === "high") {
+    // 记录高风险注入尝试
+    console.warn("[安全警告] 检测到高风险注入尝试:", {
+      pattern: detection.matchedPattern,
+      content: content.substring(0, 100),
+    });
 
-    // 对于严重注入尝试，进行更严格的清理
-    if (detection.severity === "high") {
-      return sanitizeUserInput(content, {
-        maxLength: 2000,
-        removeNewlines: true,
-        allowMarkdown: false,
-      });
-    }
+    // 严格清理
+    return sanitizeUserInput(content, {
+      maxLength: 2000,
+      removeNewlines: true,
+    });
   }
 
   // 正常清理
   return sanitizeUserInput(content, {
     maxLength: 5000,
     removeNewlines: false,
-    allowMarkdown: true,
   });
 }
 

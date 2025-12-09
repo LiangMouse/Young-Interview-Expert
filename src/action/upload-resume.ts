@@ -2,140 +2,181 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { v4 as uuidv4 } from "uuid";
-import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+import { extractText } from "unpdf";
 import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
-import { JsonOutputParser } from "@langchain/core/output_parsers";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { userProfileService } from "@/lib/user-profile-service";
 
-const _zodSchema = z.object({
-  nickname: z.string().optional().describe("Nickname"),
-  email: z.string().optional().describe("Email address"),
-  job_intention: z.string().optional().describe("Intended job position"),
-  company: z.string().optional().describe("Intended company"),
-  skills: z.array(z.string()).optional().describe("List of skills"),
-  experience_years: z
-    .number()
-    .optional()
-    .describe("Years of professional experience"),
-  school: z.string().optional().describe("Name of the school or university"),
-  major: z.string().optional().describe("Major field of study"),
-  degree: z.string().optional().describe("Degree obtained"),
-  graduation_date: z.string().optional().describe("Graduation date"),
-  work_experiences: z
+// ============ 类型定义 ============
+
+const resumeSchema = z.object({
+  personalInfo: z
+    .object({
+      name: z.string().optional(),
+      email: z.string().optional(),
+      phone: z.string().optional(),
+    })
+    .optional(),
+  jobIntention: z.string().optional(),
+  experienceYears: z.number().optional(),
+  skills: z.array(z.string()).optional(),
+  education: z
+    .object({
+      school: z.string().optional(),
+      major: z.string().optional(),
+      degree: z.string().optional(),
+      graduationDate: z.string().optional(),
+    })
+    .optional(),
+  workExperiences: z
     .array(
       z.object({
-        company: z.string().optional().describe("Company name"),
-        position: z.string().optional().describe("Position held"),
-        start_date: z.string().optional().describe("Start date of employment"),
-        end_date: z.string().optional().describe("End date of employment"),
-        description: z
-          .string()
-          .optional()
-          .describe("Description of responsibilities and achievements"),
+        company: z.string(),
+        position: z.string(),
+        startDate: z.string(),
+        endDate: z.string(),
+        description: z.string(),
       }),
     )
-    .optional()
-    .describe("List of work experiences"),
-  project_experiences: z
+    .optional(),
+  projectExperiences: z
     .array(
       z.object({
-        project_name: z.string().optional().describe("Project name"),
-        role: z.string().optional().describe("Role in the project"),
-        start_date: z.string().optional().describe("Start date of the project"),
-        end_date: z.string().optional().describe("End date of the project"),
-        tech_stack: z
-          .array(z.string())
-          .optional()
-          .describe("Technologies used in the project"),
-        description: z
-          .string()
-          .optional()
-          .describe("Description of the project"),
+        projectName: z.string(),
+        role: z.string(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        techStack: z.array(z.string()).optional(),
+        description: z.string(),
       }),
     )
-    .optional()
-    .describe("List of project experiences"),
+    .optional(),
 });
 
-export type ResumeData = z.infer<typeof _zodSchema>;
+export type ResumeData = z.infer<typeof resumeSchema>;
 
-async function parsePdf(formData: FormData) {
+interface ProfileUpdateData {
+  nickname?: string;
+  email?: string;
+  job_intention?: string;
+  experience_years?: number;
+  skills?: string[];
+  school?: string;
+  major?: string;
+  degree?: string;
+  graduation_date?: string;
+  work_experiences?: Array<{
+    company: string;
+    position: string;
+    start_date: string;
+    end_date: string;
+    description: string;
+  }>;
+  project_experiences?: Array<{
+    project_name: string;
+    role: string;
+    start_date?: string;
+    end_date?: string;
+    tech_stack?: string[];
+    description: string;
+  }>;
+  resume_url?: string;
+  updated_at?: string;
+}
+
+/**
+ * 解析PDF文件（使用unpdf）
+ */
+async function parsePdf(
+  file: File,
+): Promise<
+  { success: true; text: string } | { success: false; error: string }
+> {
   try {
-    const file = formData.get("file") as File;
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    if (!file) {
-      throw new Error("No file provided");
+    // unpdf 自动处理各种PDF格式
+    const { text } = await extractText(buffer, {
+      mergePages: true,
+    });
+
+    if (!text || text.trim().length === 0) {
+      return {
+        success: false,
+        error: "PDF文件为空或无法提取文本",
+      };
     }
-
-    const loader = new PDFLoader(file);
-    const docs = await loader.load();
-    const fullText = docs.map((doc) => doc.pageContent).join("\n");
 
     return {
       success: true,
-      text: fullText,
+      text: text.trim(),
     };
   } catch (error) {
     console.error("Error parsing PDF:", error);
-
     return {
       success: false,
-      error: "Failed to parse PDF",
+      error: error instanceof Error ? error.message : "Failed to parse PDF",
     };
   }
 }
 
+/**
+ * 使用AI分析简历（使用withStructuredOutput简化）
+ */
 async function analyzeResume(
   text: string,
 ): Promise<
   { success: true; data: ResumeData } | { success: false; error: string }
 > {
   try {
+    // 使用 withStructuredOutput 大幅简化代码
     const model = new ChatOpenAI({
       model: "deepseek-chat",
       temperature: 0,
       apiKey: process.env.DEEPSEEK_V3_API,
-      baseURL: "https://api.deepseek.com/v1",
-    });
+      configuration: {
+        baseURL: "https://api.deepseek.com/v1",
+      },
+    }).withStructuredOutput(resumeSchema);
 
-    const parser = new JsonOutputParser<ResumeData>();
-
-    const prompt = ChatPromptTemplate.fromTemplate(
-      `You are an AI assistant that analyzes a resume and extracts key information.
-      Please format your output as a JSON object that strictly follows the provided JSON schema.
-      Do not include any other text or explanations in your response, only the JSON object.
-      
-      JSON Schema:
-      {format_instructions}
-      
-      Resume Text:
-      {text}`,
-    );
-
-    const chain = prompt.pipe(model).pipe(parser);
-
-    const result = await chain.invoke({
-      text: text,
-      format_instructions: parser.getFormatInstructions(),
-    });
+    // 一行调用，自动处理prompt和JSON解析
+    const result = await model.invoke([
+      {
+        role: "system",
+        content: `你是一个专业的简历解析助手。请仔细分析简历内容，提取所有关键信息。
+注意：
+- 如果某个字段在简历中找不到，返回 undefined 或空数组
+- 工作经历和项目经历要完整提取
+- 技能列表要去重
+- 日期格式统一为 YYYY-MM 或 YYYY-MM-DD`,
+      },
+      {
+        role: "user",
+        content: `请解析以下简历内容：\n\n${text}`,
+      },
+    ]);
 
     return {
       success: true,
-      data: result,
+      data: result as ResumeData,
     };
   } catch (error) {
     console.error("Error analyzing resume:", error);
     return {
       success: false,
-      error: "Failed to analyze resume",
+      error:
+        error instanceof Error ? error.message : "Failed to analyze resume",
     };
   }
 }
 
+/**
+ * 上传简历主函数
+ */
 export async function uploadResume(formData: FormData) {
   try {
+    // 1. 验证用户
     const supabase = await createClient();
     const {
       data: { user },
@@ -150,23 +191,23 @@ export async function uploadResume(formData: FormData) {
       return { success: false, error: "No file provided" };
     }
 
-    // 1. Parse PDF
-    const { text, success, error: parseError } = await parsePdf(formData);
-
-    if (!success) {
+    // 2. 解析PDF
+    const parseResult = await parsePdf(file);
+    if (!parseResult.success) {
       return {
         success: false,
-        error: parseError,
+        error: parseResult.error,
       };
     }
-    // 2. Analyze Resume
-    const analyzeResult = await analyzeResume(text!);
+
+    // 3. AI分析简历
+    const analyzeResult = await analyzeResume(parseResult.text);
     console.log("Analyze result:", analyzeResult);
     if (!analyzeResult.success) {
       return { success: false, error: analyzeResult.error };
     }
 
-    // 3. Upload file to Supabase Storage
+    // 4. 上传文件到Storage
     const fileName = `${user.id}/${uuidv4()}.pdf`;
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -179,7 +220,7 @@ export async function uploadResume(formData: FormData) {
       return { success: false, error: `Storage error: ${uploadError.message}` };
     }
 
-    // 4. Get public URL
+    // 5. 获取公开URL
     const { data: publicUrlData } = supabase.storage
       .from("resumes")
       .getPublicUrl(fileName);
@@ -191,17 +232,34 @@ export async function uploadResume(formData: FormData) {
 
     const publicUrl = publicUrlData.publicUrl;
 
-    // 5. 更新用户资料
-    // 使用简化的数据库字段结构
-    // 以下是使用langchain dsv3返回的抽象数据
-    const aiData = analyzeResult.data as any;
-    const profileUpdateData = {
-      nickname:
-        aiData.nickname || (aiData.contact_info && aiData.contact_info.name),
-      job_intention: analyzeResult.data.job_intention || "",
-      skills: analyzeResult.data.skills || [],
-      work_experiences: aiData.work_experience || [],
-      project_experiences: aiData.projects || [],
+    // 5. 类型安全的数据映射
+    const profileUpdateData: ProfileUpdateData = {
+      nickname: analyzeResult.data.personalInfo?.name,
+      email: analyzeResult.data.personalInfo?.email,
+      job_intention: analyzeResult.data.jobIntention,
+      experience_years: analyzeResult.data.experienceYears,
+      skills: analyzeResult.data.skills,
+      school: analyzeResult.data.education?.school,
+      major: analyzeResult.data.education?.major,
+      degree: analyzeResult.data.education?.degree,
+      graduation_date: analyzeResult.data.education?.graduationDate,
+      work_experiences: analyzeResult.data.workExperiences?.map((exp) => ({
+        company: exp.company,
+        position: exp.position,
+        start_date: exp.startDate,
+        end_date: exp.endDate,
+        description: exp.description,
+      })),
+      project_experiences: analyzeResult.data.projectExperiences?.map(
+        (proj) => ({
+          project_name: proj.projectName,
+          role: proj.role,
+          start_date: proj.startDate,
+          end_date: proj.endDate,
+          tech_stack: proj.techStack,
+          description: proj.description,
+        }),
+      ),
       resume_url: publicUrl,
       updated_at: new Date().toISOString(),
     };
@@ -211,7 +269,7 @@ export async function uploadResume(formData: FormData) {
       Object.entries(profileUpdateData).filter(
         ([, value]) => value !== undefined,
       ),
-    );
+    ) as ProfileUpdateData;
 
     const { data, error } = await supabase
       .from("user_profiles")

@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { Mail, Lock, Github } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,11 @@ export function RegisterForm() {
     "google" | "github" | null
   >(null);
   const [error, setError] = useState<string | null>(null);
+  // useTransition 追踪导航状态
+  const [isPending, startTransition] = useTransition();
+
+  // 综合 loading 状态
+  const isBusy = loading || isPending;
 
   // 检查 URL 参数中的错误信息（来自 OAuth callback）
   useEffect(() => {
@@ -75,6 +80,7 @@ export function RegisterForm() {
 
       if (error) {
         setError(error.message);
+        setLoading(false);
         return;
       }
 
@@ -85,13 +91,17 @@ export function RegisterForm() {
           setUserInfo(userProfile);
         }
         toast.success(t("registerSuccess"));
-        router.push("/auth/sign-in");
+        // API 完成，重置 loading
+        setLoading(false);
+        // 使用 startTransition 追踪导航状态
+        startTransition(() => {
+          router.push("/auth/sign-in");
+        });
       }
     } catch (err) {
       setError(t("registerError"));
-      console.error("Register error:", err);
-    } finally {
       setLoading(false);
+      console.error("Register error:", err);
     }
   };
 
@@ -179,7 +189,7 @@ export function RegisterForm() {
                       setEmail(e.target.value);
                       setError(null);
                     }}
-                    disabled={loading || isOAuthLoading !== null}
+                    disabled={isBusy || isOAuthLoading !== null}
                     required
                   />
                 </div>
@@ -203,7 +213,7 @@ export function RegisterForm() {
                       setPassword(e.target.value);
                       setError(null);
                     }}
-                    disabled={loading || isOAuthLoading !== null}
+                    disabled={isBusy || isOAuthLoading !== null}
                     required
                   />
                 </div>
@@ -227,7 +237,7 @@ export function RegisterForm() {
                       setConfirmPassword(e.target.value);
                       setError(null);
                     }}
-                    disabled={loading || isOAuthLoading !== null}
+                    disabled={isBusy || isOAuthLoading !== null}
                     required
                   />
                 </div>
@@ -236,10 +246,14 @@ export function RegisterForm() {
               <Button
                 type="submit"
                 className="w-full h-12 bg-[#059669] hover:bg-[#059669]/90 text-white font-medium text-base transition-all shadow-sm hover:shadow-md"
-                loading={loading}
+                loading={isBusy}
                 disabled={isOAuthLoading !== null}
               >
-                {t("createAccount")}
+                {isBusy
+                  ? isPending
+                    ? "正在跳转..."
+                    : t("createAccount")
+                  : t("createAccount")}
               </Button>
             </form>
 

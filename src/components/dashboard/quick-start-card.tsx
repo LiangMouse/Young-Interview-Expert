@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -10,11 +11,64 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTranslations } from "next-intl";
+import { Loader2 } from "lucide-react";
+import {
+  createInterview,
+  type InterviewTopic,
+  type InterviewDifficulty,
+} from "@/action/create-interview";
+import { toast } from "sonner";
 
 export function QuickStartCard() {
   const t = useTranslations("dashboard.simulation");
-  const [position, setPosition] = useState<string>("");
-  const [difficulty, setDifficulty] = useState<string>("");
+  const router = useRouter();
+
+  const [topic, setTopic] = useState<InterviewTopic | "">("");
+  const [difficulty, setDifficulty] = useState<InterviewDifficulty | "">("");
+  const [isLoading, setIsLoading] = useState(false);
+  // useTransition 追踪导航状态
+  const [isPending, startTransition] = useTransition();
+
+  // 综合 loading 状态：API 调用中 或 导航中
+  const isBusy = isLoading || isPending;
+
+  // 开始面试
+  const handleStartInterview = useCallback(async () => {
+    // 验证表单
+    if (!topic) {
+      toast.error("请选择面试主题");
+      return;
+    }
+    if (!difficulty) {
+      toast.error("请选择面试难度");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await createInterview({ topic, difficulty });
+
+      if (result.error) {
+        toast.error(result.error);
+        setIsLoading(false);
+        return;
+      }
+
+      if (result.interviewId) {
+        // API 调用完成，重置 isLoading
+        setIsLoading(false);
+        // 使用 startTransition 包裹导航，isPending 会自动追踪导航状态
+        startTransition(() => {
+          router.push(`/interview/${result.interviewId}`);
+        });
+      }
+    } catch (err) {
+      console.error("Failed to start interview:", err);
+      toast.error("启动面试失败，请重试");
+      setIsLoading(false);
+    }
+  }, [topic, difficulty, router]);
 
   return (
     <div className="rounded-lg border border-[#E5E5E5] bg-white p-10 shadow-sm lg:p-12">
@@ -30,7 +84,10 @@ export function QuickStartCard() {
             <label className="text-xs uppercase tracking-wide text-[#666666]">
               {t("topic")}
             </label>
-            <Select value={position} onValueChange={setPosition}>
+            <Select
+              value={topic}
+              onValueChange={(value) => setTopic(value as InterviewTopic)}
+            >
               <SelectTrigger className="border-[#E5E5E5] bg-white text-[#141414] h-12">
                 <SelectValue placeholder={t("selectTopic")} />
               </SelectTrigger>
@@ -48,7 +105,12 @@ export function QuickStartCard() {
             <label className="text-xs uppercase tracking-wide text-[#666666]">
               {t("difficulty")}
             </label>
-            <Select value={difficulty} onValueChange={setDifficulty}>
+            <Select
+              value={difficulty}
+              onValueChange={(value) =>
+                setDifficulty(value as InterviewDifficulty)
+              }
+            >
               <SelectTrigger className="border-[#E5E5E5] bg-white text-[#141414] h-12">
                 <SelectValue placeholder={t("selectDifficulty")} />
               </SelectTrigger>
@@ -69,11 +131,22 @@ export function QuickStartCard() {
             </Select>
           </div>
         </div>
+
+        {/* 开始面试按钮 */}
         <Button
           size="lg"
-          className="w-full bg-[#0F3E2E] text-base font-normal text-white hover:bg-[#0F3E2E]/90 h-12"
+          onClick={handleStartInterview}
+          disabled={isBusy}
+          className="w-full bg-[#0F3E2E] text-base font-normal text-white hover:bg-[#0F3E2E]/90 h-12 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {t("startButton")}
+          {isBusy ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {isLoading ? "正在创建面试..." : "正在跳转..."}
+            </>
+          ) : (
+            t("startButton")
+          )}
         </Button>
       </div>
     </div>

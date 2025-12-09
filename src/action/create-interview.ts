@@ -3,25 +3,71 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function createInterview() {
+/** 面试主题类型 */
+export type InterviewTopic = "frontend" | "backend" | "fullstack" | "mobile";
+
+/** 面试难度类型 */
+export type InterviewDifficulty =
+  | "beginner"
+  | "intermediate"
+  | "advanced"
+  | "expert";
+
+/** 创建面试的参数 */
+export interface CreateInterviewParams {
+  /** 面试主题 */
+  topic: InterviewTopic;
+  /** 面试难度 */
+  difficulty: InterviewDifficulty;
+}
+
+/**
+ * 创建面试会话
+ * @param params 面试配置（主题、难度）
+ * @returns 面试 ID 或错误信息
+ */
+export async function createInterview(params: CreateInterviewParams) {
+  const { topic, difficulty } = params;
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { error: "You must be logged in to create an interview." };
+    return { error: "请先登录" };
   }
 
+  // 查找用户的 profile id（interviews 表的 user_id 关联 user_profiles.id）
+  const { data: profile, error: profileError } = await supabase
+    .from("user_profiles")
+    .select("id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    console.error("Error finding user profile:", profileError);
+    return { error: "用户资料不存在，请先完善个人信息" };
+  }
+
+  // 创建面试会话
   const { data, error } = await supabase
     .from("interviews")
-    .insert([{ user_id: user.id }])
+    .insert([
+      {
+        user_id: profile.id,
+        type: topic,
+        status: "pending",
+        // 将难度存储在 duration 字段（临时方案，后续可新增 difficulty 字段）
+        duration: difficulty,
+      },
+    ])
     .select("id")
     .single();
 
   if (error) {
     console.error("Error creating interview:", error);
-    return { error: "Failed to create interview." };
+    return { error: "创建面试失败，请重试" };
   }
 
   revalidatePath("/dashboard");

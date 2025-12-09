@@ -1,4 +1,4 @@
-# Young-Interview-Expert 🚀
+# Interview Lab 🚀
 
 > 🚧 **项目正在开发中** 🚧
 
@@ -41,10 +41,14 @@ cp .env.example .env.local
 # 编辑 .env.local，填入你的 Supabase 配置等环境变量
 
 # 4. 设置数据库
+#   - 使用 Supabase
 
+# 5. 启动开发服务器（Next.js）
+pnpm dev
 
-# 5. 启动开发服务器
-pnpm start
+# 6. 启动面试官 Agent（独立进程）
+# 需已配置 LiveKit/Deepgram/MiniMax 等环境变量
+pnpm exec livekit-agent start agent/interviewer.ts
 ```
 
 ### 环境要求

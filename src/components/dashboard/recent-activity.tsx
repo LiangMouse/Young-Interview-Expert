@@ -1,41 +1,87 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { FileText } from "lucide-react";
+import { getRecentInterviews } from "@/action/get-recent-interviews";
+import type { InterviewRecord } from "@/types/interview";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const activities = [
-  {
-    id: 1,
-    date: "Dec 20, 2024",
-    role: "Frontend Developer",
-    score: 92,
-    status: "completed",
-  },
-  {
-    id: 2,
-    date: "Dec 18, 2024",
-    role: "Full Stack Developer",
-    score: 88,
-    status: "completed",
-  },
-  {
-    id: 3,
-    date: "Dec 15, 2024",
-    role: "Backend Developer",
-    score: 75,
-    status: "completed",
-  },
-  {
-    id: 4,
-    date: "Dec 12, 2024",
-    role: "Frontend Developer",
-    score: 81,
-    status: "pending",
-  },
-];
+/** 面试类型映射 */
+const typeLabels: Record<string, string> = {
+  frontend: "前端开发",
+  backend: "后端开发",
+  fullstack: "全栈开发",
+  mobile: "移动端开发",
+};
 
 export function RecentActivity() {
   const t = useTranslations("dashboard");
   const tTable = useTranslations("dashboard.table");
+
+  const [activities, setActivities] = useState<InterviewRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 获取最近面试记录
+  useEffect(() => {
+    async function fetchActivities() {
+      try {
+        const data = await getRecentInterviews();
+        setActivities(data);
+      } catch (err) {
+        console.error("Failed to fetch recent activities:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchActivities();
+  }, []);
+
+  // 加载状态
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-[#E5E5E5] bg-white shadow-sm">
+        <div className="border-b border-[#E5E5E5] px-8 py-6">
+          <h2 className="text-xl font-light text-[#141414]">
+            {t("recentHistory")}
+          </h2>
+        </div>
+        <div className="p-8 space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-4">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // 空状态
+  if (activities.length === 0) {
+    return (
+      <div className="rounded-lg border border-[#E5E5E5] bg-white shadow-sm">
+        <div className="border-b border-[#E5E5E5] px-8 py-6">
+          <h2 className="text-xl font-light text-[#141414]">
+            {t("recentHistory")}
+          </h2>
+        </div>
+        <div className="flex flex-col items-center justify-center py-16 px-8">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#F5F5F5] mb-4">
+            <FileText className="h-8 w-8 text-[#999999]" />
+          </div>
+          <p className="text-base text-[#666666] mb-1">暂无面试记录</p>
+          <p className="text-sm text-[#999999]">
+            开始您的第一次模拟面试，记录将显示在这里
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border border-[#E5E5E5] bg-white shadow-sm">
@@ -72,7 +118,7 @@ export function RecentActivity() {
                   {activity.date}
                 </td>
                 <td className="px-8 py-4 text-sm text-[#141414]">
-                  {activity.role}
+                  {typeLabels[activity.type] || activity.type}
                 </td>
                 <td className="px-8 py-4 text-sm text-[#141414]">
                   {activity.score}/100

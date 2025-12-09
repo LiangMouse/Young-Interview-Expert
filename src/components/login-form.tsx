@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { Mail, Lock, Github } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,11 @@ export function LoginForm() {
   >(null);
   const [error, setError] = useState<string | null>(null);
   const { setUserInfo } = useUserStore();
+  // useTransition 追踪导航状态
+  const [isPending, startTransition] = useTransition();
+
+  // 综合 loading 状态
+  const isBusy = isLoading || isPending;
 
   // 检查 URL 参数中的错误信息（来自 OAuth callback）
   useEffect(() => {
@@ -53,6 +58,7 @@ export function LoginForm() {
 
       if (error) {
         setError(error.message);
+        setIsLoading(false);
         return;
       }
 
@@ -62,13 +68,17 @@ export function LoginForm() {
           setUserInfo(userProfile);
         }
         toast.success(t("loginSuccess"));
-        router.push("/dashboard");
+        // API 完成，重置 isLoading
+        setIsLoading(false);
+        // 使用 startTransition 追踪导航状态
+        startTransition(() => {
+          router.push("/dashboard");
+        });
       }
     } catch (err) {
       setError(t("loginError"));
-      console.error("Login error:", err);
-    } finally {
       setIsLoading(false);
+      console.error("Login error:", err);
     }
   };
 
@@ -105,7 +115,7 @@ export function LoginForm() {
               className="w-full h-12 border-gray-200 bg-white hover:bg-gray-50 text-[#141414] font-normal"
               onClick={() => handleOAuthLogin("github")}
               loading={isOAuthLoading === "github"}
-              disabled={isLoading || isOAuthLoading !== null}
+              disabled={isBusy || isOAuthLoading !== null}
             >
               <Github className="mr-2 h-5 w-5" />
               {isOAuthLoading === "github"
@@ -117,7 +127,7 @@ export function LoginForm() {
               className="w-full h-12 border-gray-200 bg-white hover:bg-gray-50 text-[#141414] font-normal"
               onClick={() => handleOAuthLogin("google")}
               loading={isOAuthLoading === "google"}
-              disabled={isLoading || isOAuthLoading !== null}
+              disabled={isBusy || isOAuthLoading !== null}
             >
               <FcGoogle className="mr-2 h-5 w-5" />
               {isOAuthLoading === "google"
@@ -158,7 +168,7 @@ export function LoginForm() {
                       setEmail(e.target.value);
                       setError(null);
                     }}
-                    disabled={isLoading || isOAuthLoading !== null}
+                    disabled={isBusy || isOAuthLoading !== null}
                     required
                   />
                 </div>
@@ -183,7 +193,7 @@ export function LoginForm() {
                       setPassword(e.target.value);
                       setError(null);
                     }}
-                    disabled={isLoading || isOAuthLoading !== null}
+                    disabled={isBusy || isOAuthLoading !== null}
                     required
                   />
                 </div>
@@ -201,10 +211,14 @@ export function LoginForm() {
               <Button
                 type="submit"
                 className="w-full h-12 bg-[#059669] hover:bg-[#059669]/90 text-white font-medium text-base transition-all shadow-sm hover:shadow-md cursor-pointer"
-                loading={isLoading}
+                loading={isBusy}
                 disabled={isOAuthLoading !== null}
               >
-                {t("signIn")}
+                {isBusy
+                  ? isPending
+                    ? "正在跳转..."
+                    : t("signIn")
+                  : t("signIn")}
               </Button>
             </form>
 

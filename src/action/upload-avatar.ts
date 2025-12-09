@@ -40,55 +40,34 @@ export async function uploadAvatar(formData: FormData) {
       return { success: false, error: "图片大小不能超过 5MB" };
     }
 
-    // 1. 上传文件到 Supabase Storage
+    // 1. 上传文件到 Supabase Storage（使用 avatars bucket）
     const fileExtension = file.name.split(".").pop() || "jpg";
+    // 路径格式: {user_id}/{uuid}.{ext}，与 RLS 策略匹配
     const fileName = `${user.id}/${uuidv4()}.${fileExtension}`;
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    let bucketName = "avatars";
-    let filePath = fileName;
-    let uploadSuccess = false;
+    const bucketName = "avatars";
 
-    // 首先尝试上传到 avatars bucket
-    const { error: avatarsError } = await supabase.storage
-      .from("avatars")
+    const { error: uploadError } = await supabase.storage
+      .from(bucketName)
       .upload(fileName, buffer, {
         contentType: file.type,
         upsert: true,
       });
 
-    if (avatarsError) {
-      // 如果 avatars bucket 不存在，尝试使用 resumes bucket
-      bucketName = "resumes";
-      filePath = `avatars/${fileName}`;
-      const { error: resumesError } = await supabase.storage
-        .from("resumes")
-        .upload(filePath, buffer, {
-          contentType: file.type,
-          upsert: true,
-        });
-
-      if (resumesError) {
-        console.error("Storage upload error:", resumesError);
-        return {
-          success: false,
-          error: `上传失败: ${resumesError.message}`,
-        };
-      }
-      uploadSuccess = true;
-    } else {
-      uploadSuccess = true;
-    }
-
-    if (!uploadSuccess) {
-      return { success: false, error: "上传失败" };
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      return {
+        success: false,
+        error: `上传失败: ${uploadError.message}`,
+      };
     }
 
     // 2. 获取公共 URL
     const { data: publicUrlData } = supabase.storage
       .from(bucketName)
-      .getPublicUrl(filePath);
+      .getPublicUrl(fileName);
 
     if (!publicUrlData) {
       return { success: false, error: "无法获取头像公共 URL" };

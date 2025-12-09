@@ -1,5 +1,3 @@
-import { getCurrentUser } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
@@ -8,13 +6,6 @@ import { StatsGrid } from "@/components/dashboard/stats-grid";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 
 export default async function DashboardPage() {
-  const user = await getCurrentUser();
-
-  if (!user) {
-    redirect("/auth/sign-in");
-    return null;
-  }
-
   return (
     <DashboardShell>
       <DashboardHeader />
