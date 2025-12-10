@@ -3,6 +3,9 @@
 
 echo "🔍 Running pre-commit checks..."
 
+# 记录运行前的暂存文件
+STAGED_FILES_BEFORE=$(git diff --cached --name-only)
+
 # 运行 lint-staged (格式化和 lint)
 echo "📝 Running lint and format..."
 npx lint-staged
@@ -12,11 +15,12 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# 检查暂存区是否有新的修改，如果有则添加到暂存区
-if ! git diff --cached --quiet; then
-  echo "🔄 Files were modified during linting, adding to staging..."
-  git add .
-  echo "✅ Modified files added to staging area. Please commit again."
+# 检查运行后暂存的文件是否有变化
+STAGED_FILES_AFTER=$(git diff --cached --name-only)
+
+if [ "$STAGED_FILES_BEFORE" != "$STAGED_FILES_AFTER" ]; then
+  echo "🔄 Files were modified during linting, staging changes..."
+  echo "✅ All changes staged. Please commit again."
   exit 1
 fi
 
