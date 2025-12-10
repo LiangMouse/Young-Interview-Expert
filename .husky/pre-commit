@@ -12,4 +12,12 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# 检查暂存区是否有新的修改，如果有则添加到暂存区
+if ! git diff --cached --quiet; then
+  echo "🔄 Files were modified during linting, adding to staging..."
+  git add .
+  echo "✅ Modified files added to staging area. Please commit again."
+  exit 1
+fi
+
 echo "✅ Pre-commit checks passed!"

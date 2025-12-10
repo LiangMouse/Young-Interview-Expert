@@ -11,19 +11,10 @@
  * - TTS: MiniMax TTS（T2A / speech-01），通过 OpenAI 兼容接口输出中文语音
  * - VAD: 基于 STT 内置的 endpointing 能力
  */
-import {
-  voice,
-  llm,
-  type JobContext,
-  type JobProcess,
-  cli,
-  defineAgent,
-  WorkerOptions,
-} from "@livekit/agents";
+import { voice, llm, type JobContext, type JobProcess } from "@livekit/agents";
 import { STT } from "@livekit/agents-plugin-deepgram";
 import { LLM, TTS } from "@livekit/agents-plugin-openai";
 import { RoomEvent } from "livekit-client";
-import { fileURLToPath } from "node:url";
 
 // ============================================================
 //  环境变量配置
@@ -189,9 +180,9 @@ function createToolContext(): llm.ToolContext {
 
 /**
  * Agent 入口模块
- * 定义 worker 对象供 LiveKit CLI 或自启动使用
+ * 导出 prewarm 和 entry 函数，供 LiveKit Worker 调用
  */
-const agentWorker = {
+export default {
   /**
    * prewarm: Worker 启动时预加载资源
    * 可在此预热模型、加载配置等
@@ -336,77 +327,11 @@ const agentWorker = {
   },
 };
 
-// 默认导出（保持兼容性，供 CLI 工具使用）
-export default agentWorker;
-
 // ============================================================
 //  导出工具和类型，便于外部扩展
 // ============================================================
 
 export { createToolContext, createSaveEvaluationTool, SYSTEM_PROMPT };
-
-// ============================================================
-//  自启动逻辑
-// ============================================================
-
-/**
- * 检查当前文件是否是被直接执行的入口文件
- * 如果是，则提供启动说明
- */
-const isMain = process.argv[1] === fileURLToPath(import.meta.url);
-
-if (isMain) {
-  console.log("🚀 LiveKit Interviewer Agent");
-  console.log("============================");
-  console.log("");
-  console.log("此文件现在可以作为独立进程常驻运行！");
-  console.log("");
-  console.log("启动方式：");
-  console.log("1. 使用 LiveKit CLI (推荐):");
-  console.log("   pnpm exec livekit-agent start agent/interviewer.ts");
-  console.log("   或");
-  console.log("   npx livekit-agent start agent/interviewer.ts");
-  console.log("");
-  console.log("2. 直接运行此文件 (需要环境变量):");
-  console.log("   tsx agent/interviewer.ts");
-  console.log("   或");
-  console.log("   node dist/agent/interviewer.js (需要先编译)");
-  console.log("");
-  console.log("环境变量检查:");
-  const requiredEnvVars = [
-    "LIVEKIT_URL",
-    "LIVEKIT_API_KEY",
-    "LIVEKIT_API_SECRET",
-    "DEEPGRAM_API_KEY",
-    "MINIMAX_API_KEY",
-  ];
-
-  const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key]);
-  if (missingEnvVars.length > 0) {
-    console.error(`❌ 缺少必要的环境变量: ${missingEnvVars.join(", ")}`);
-    console.error("请确保已设置所有必需的环境变量。");
-    process.exit(1);
-  } else {
-    console.log("✅ 所有必需的环境变量已设置");
-  }
-
-  console.log("");
-  console.log("正在启动 Worker...");
-
-  try {
-    cli.runApp(
-      new WorkerOptions({
-        agent: fileURLToPath(import.meta.url),
-      }),
-    );
-  } catch (error) {
-    console.error("❌ 启动 Worker 失败:", error);
-    console.error("");
-    console.error("💡 请尝试使用 CLI 命令启动:");
-    console.error("   pnpm exec livekit-agent start agent/interviewer.ts");
-    process.exit(1);
-  }
-}
 
 /**
  * ============================================================
@@ -430,20 +355,11 @@ if (isMain) {
  *   - male-qingnian       青年男声
  *   - male-zhubo          播音男声
  *
- * 启动方式（三种方式都可以）：
- *
- * 方式 1: 直接运行（推荐，代码会自动启动 Worker）
- *   tsx agent/interviewer.ts
- *   或
- *   node dist/agent/interviewer.js  (需要先编译)
- *
- * 方式 2: 使用 LiveKit CLI（稳定可靠）
+ * 启动命令：
  *   npx livekit-agent start agent/interviewer.ts
- *   或
- *   pnpm exec livekit-agent start agent/interviewer.ts
  *
- * 方式 3: 使用编程方式启动
- *   node -e "import('./agent/interviewer.ts')"
+ * 或使用 pnpm：
+ *   pnpm exec livekit-agent start agent/interviewer.ts
  *
  * 生产环境编译后运行：
  *   pnpm build
