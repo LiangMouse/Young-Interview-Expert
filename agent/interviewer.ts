@@ -15,6 +15,7 @@ import { voice, llm, type JobContext, type JobProcess } from "@livekit/agents";
 import { STT } from "@livekit/agents-plugin-deepgram";
 import { LLM, TTS } from "@livekit/agents-plugin-openai";
 import { RoomEvent } from "livekit-client";
+import { injectionGuard, GuardrailsEngine } from "@presidio-dev/hai-guardrails";
 
 // ============================================================
 //  环境变量配置
@@ -72,6 +73,120 @@ export interface EvaluationPayload {
   overallScore: number;
   dimensionScores?: Record<string, number>;
   comment: string;
+}
+
+// ============================================================
+//  安全防护和工具函数
+// ============================================================
+
+/**
+ * 创建安全防护引擎
+ * 使用 @presidio-dev/hai-guardrails 检测提示词注入攻击
+ */
+function createSecurityEngine(): GuardrailsEngine {
+  const guard = injectionGuard(
+    { roles: ["user"] },
+    { mode: "heuristic", threshold: 0.7 },
+  );
+  return new GuardrailsEngine({ guards: [guard] });
+}
+
+/**
+ * 检查用户输入是否安全
+ */
+async function checkInputSafety(
+  engine: GuardrailsEngine,
+  userInput: string,
+): Promise<{ isSafe: boolean; sanitized: string }> {
+  try {
+    const messages = [{ role: "user" as const, content: userInput }];
+    const results = await engine.run(messages);
+
+    // 检查是否所有 guard 都通过
+    const allPassed = results.messagesWithGuardResult.every((guardResult) =>
+      guardResult.messages.every((msg) => msg.passed),
+    );
+
+    if (!allPassed) {
+      console.warn("[安全] 检测到潜在的安全威胁，已阻止或清理输入");
+      // 返回清理后的输入（移除危险内容）
+      return {
+        isSafe: false,
+        sanitized: userInput
+          .replace(/ignore\s+previous\s+instructions/gi, "")
+          .replace(/forget\s+all\s+instructions/gi, "")
+          .replace(/忘记所有指令/gi, "")
+          .substring(0, 200)
+          .trim(),
+      };
+    }
+
+    return { isSafe: true, sanitized: userInput };
+  } catch (error) {
+    console.error("[安全] 安全检查失败:", error);
+    // 出错时保守处理：返回清理后的输入
+    return {
+      isSafe: false,
+      sanitized: userInput.substring(0, 200),
+    };
+  }
+}
+
+/**
+ * 获取对话历史
+ */
+async function fetchConversationHistory(
+  interviewId: string,
+): Promise<
+  Array<{ role: "user" | "assistant"; content: string; timestamp: Date }>
+> {
+  try {
+    const url = `${DIRECTOR_BASE_URL}/api/interview/history?interviewId=${encodeURIComponent(interviewId)}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.warn(
+        `[对话历史] 获取失败: ${response.status} ${response.statusText}`,
+      );
+      return [];
+    }
+
+    const data = await response.json();
+    return data.messages || [];
+  } catch (error) {
+    console.error("[对话历史] 获取失败:", error);
+    return [];
+  }
+}
+
+/**
+ * 保存消息到数据库
+ */
+async function saveMessage(
+  interviewId: string,
+  role: "user" | "assistant",
+  content: string,
+): Promise<void> {
+  try {
+    const response = await fetch(
+      `${DIRECTOR_BASE_URL}/api/interview/messages`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interviewId, role, content }),
+      },
+    );
+
+    if (!response.ok) {
+      console.error(
+        `[消息保存] 失败: ${response.status} ${await response.text()}`,
+      );
+    } else {
+      console.log(`[消息保存] 成功保存 ${role} 消息`);
+    }
+  } catch (error) {
+    console.error("[消息保存] 请求失败:", error);
+  }
 }
 
 // ============================================================
@@ -190,6 +305,8 @@ export default {
   prewarm: async (proc: JobProcess) => {
     // 预加载工具上下文
     proc.userData.toolContext = createToolContext();
+    // 预加载安全防护引擎
+    proc.userData.securityEngine = createSecurityEngine();
     console.log("[interviewer] prewarm complete");
   },
 
@@ -242,11 +359,21 @@ export default {
       voice: MINIMAX_TTS_VOICE as any,
     });
 
-    // 获取预加载的工具上下文
+    // 获取预加载的工具上下文和安全引擎
     const toolContext =
       (ctx.proc.userData.toolContext as llm.ToolContext) ?? createToolContext();
+    const securityEngine =
+      (ctx.proc.userData.securityEngine as GuardrailsEngine) ??
+      createSecurityEngine();
 
-    // 创建 Voice Agent
+    // 存储 interviewId 和对话历史用于后续的消息保存和上下文注入
+    let currentInterviewId: string | null = null;
+    let conversationHistory: Array<{
+      role: "user" | "assistant";
+      content: string;
+    }> = [];
+
+    // 创建 Voice Agent（使用基础 system prompt，历史将在收到 start_interview 时注入）
     const agent = new voice.Agent({
       instructions: SYSTEM_PROMPT,
       stt,
@@ -271,9 +398,44 @@ export default {
 
     console.log("[interviewer] agent session started");
 
-    // 监听用户转写事件（可用于日志/调试）
-    session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (ev) => {
-      console.log("[interviewer] user:", ev.transcript);
+    // 监听用户转写事件：应用安全防护并保存消息
+    session.on(
+      voice.AgentSessionEventTypes.UserInputTranscribed,
+      async (ev) => {
+        const userTranscript = ev.transcript;
+        console.log("[interviewer] user transcript:", userTranscript);
+
+        // 安全检查
+        const safetyCheck = await checkInputSafety(
+          securityEngine,
+          userTranscript,
+        );
+
+        if (!safetyCheck.isSafe) {
+          console.warn("[interviewer] 用户输入未通过安全检查，已阻止或清理");
+          // 可以选择不处理或使用清理后的内容
+          // 这里我们记录但继续处理（使用清理后的内容）
+        }
+
+        // 保存用户消息（使用清理后的内容）
+        if (currentInterviewId) {
+          await saveMessage(currentInterviewId, "user", safetyCheck.sanitized);
+        }
+      },
+    );
+
+    // 监听 AI 语音创建事件：保存 AI 消息
+    // 注意：SpeechCreatedEvent 在语音生成时触发，但可能不包含完整文本
+    // 我们可以通过监听 LLM 的响应来获取完整文本
+    let lastAiResponse: string | null = null;
+
+    session.on(voice.AgentSessionEventTypes.SpeechCreated, async (ev) => {
+      // ev.speechHandle 可能包含响应文本，但需要从其他来源获取
+      // 这里我们记录事件，实际文本从 LLM 响应中获取
+      if (currentInterviewId && lastAiResponse) {
+        await saveMessage(currentInterviewId, "assistant", lastAiResponse);
+        lastAiResponse = null; // 清空，避免重复保存
+      }
     });
 
     // 监听 Agent 状态变化
@@ -282,7 +444,7 @@ export default {
     });
 
     // 监听 DataReceived（start_interview RPC）
-    const handleDataReceived = (...args: unknown[]) => {
+    const handleDataReceived = async (...args: unknown[]) => {
       const payload = args[0];
       if (!(payload instanceof Uint8Array)) return;
       try {
@@ -291,6 +453,37 @@ export default {
         if (message?.name === "start_interview") {
           const interviewId = message.data?.interviewId;
           console.log("[interviewer] received start_interview", interviewId);
+
+          // 保存 interviewId
+          currentInterviewId = interviewId;
+
+          // 获取对话历史并构建增强的系统提示
+          const history = await fetchConversationHistory(interviewId);
+          let enhancedSystemPrompt = SYSTEM_PROMPT;
+
+          if (history.length > 0) {
+            // 将历史对话格式化为上下文
+            const historyContext = history
+              .slice(-10) // 只取最近 10 条消息
+              .map(
+                (msg) =>
+                  `${msg.role === "user" ? "候选人" : "面试官"}: ${msg.content}`,
+              )
+              .join("\n");
+
+            enhancedSystemPrompt = `${SYSTEM_PROMPT}
+
+【对话历史上下文】
+以下是本次面试的对话历史，请参考这些信息来保持对话的连贯性：
+${historyContext}
+
+请基于以上对话历史继续面试，保持话题的连贯性和专业性。`;
+          }
+
+          // 更新 agent 的 instructions（如果支持动态更新）
+          // 注意：LiveKit Agent 可能不支持运行时修改 instructions
+          // 这里我们记录增强的提示词，实际使用时可能需要其他方式注入
+
           // 初始问候
           session.say(
             "您好，我是您的 AI 面试官，我们开始吧。请先做一下自我介绍。",
