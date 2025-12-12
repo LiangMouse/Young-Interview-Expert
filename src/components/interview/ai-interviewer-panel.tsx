@@ -80,6 +80,11 @@ export function AIInterviewerPanel({
             <p className="mt-3 text-xs uppercase tracking-wide text-[#999999]">
               {getStatusText()}
             </p>
+            {/* DEBUG INFO */}
+            <p className="mt-1 text-[10px] text-gray-400">
+              Debug: {isConnected ? "已连接到房间" : "未连接"}
+              {isMicEnabled ? " | Mic On" : " | Mic Off"}
+            </p>
           </>
         )}
       </div>

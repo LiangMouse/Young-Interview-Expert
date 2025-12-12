@@ -28,19 +28,22 @@ importers:
         version: 1.1.3(@langchain/core@1.0.2(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.54.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))(openai@6.10.0(ws@8.18.3)(zod@4.1.12)))(ws@8.18.3)
       '@livekit/agents':
         specifier: ^1.0.24
-        version: 1.0.24(@livekit/rtc-node@0.13.21)(zod@4.1.12)
+        version: 1.0.24(@livekit/rtc-node@0.13.22)(zod@4.1.12)
       '@livekit/agents-plugin-deepgram':
         specifier: ^1.0.24
-        version: 1.0.24(@livekit/agents@1.0.24(@livekit/rtc-node@0.13.21)(zod@4.1.12))(@livekit/rtc-node@0.13.21)
+        version: 1.0.24(@livekit/agents@1.0.24(@livekit/rtc-node@0.13.22)(zod@4.1.12))(@livekit/rtc-node@0.13.22)
       '@livekit/agents-plugin-openai':
         specifier: ^1.0.24
-        version: 1.0.24(@livekit/agents@1.0.24(@livekit/rtc-node@0.13.21)(zod@4.1.12))(@livekit/rtc-node@0.13.21)(zod@4.1.12)
+        version: 1.0.24(@livekit/agents@1.0.24(@livekit/rtc-node@0.13.22)(zod@4.1.12))(@livekit/rtc-node@0.13.22)(zod@4.1.12)
       '@livekit/components-react':
         specifier: ^2.9.17
         version: 2.9.17(livekit-client@2.16.0(@types/dom-mediacapture-record@1.0.22))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(tslib@2.8.1)
       '@livekit/components-styles':
         specifier: ^1.2.0
         version: 1.2.0
+      '@livekit/rtc-node':
+        specifier: ^0.13.22
+        version: 0.13.22
       '@lottiefiles/dotlottie-react':
         specifier: ^0.17.3
         version: 0.17.6(react@19.2.0)
@@ -125,6 +128,9 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
       easymde:
         specifier: ^2.20.0
         version: 2.20.0
@@ -252,6 +258,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.1.16
+      '@types/dotenv':
+        specifier: ^8.2.3
+        version: 8.2.3
       '@types/node':
         specifier: ^20
         version: 20.19.24
@@ -476,6 +485,9 @@ packages:
   '@commitlint/types@19.8.1':
     resolution: {integrity: sha512-/yCrWGCoA1SVKOks25EGadP9Pnj0oAIHGpl2wH2M2Y46dPM2ueb8wyCVOD7O3WCTkaJ0IkKvzhl1JY7+uCT2Dw==}
     engines: {node: '>=v18'}
+
+  '@datastructures-js/deque@1.0.8':
+    resolution: {integrity: sha512-PSBhJ2/SmeRPRHuBv7i/fHWIdSC3JTyq56qb+Rq0wjOagi0/fdV5/B/3Md5zFZus/W6OkSPMaxMKKMNMrSmubg==}
 
   '@emnapi/core@1.7.0':
     resolution: {integrity: sha512-pJdKGq/1iquWYtv1RRSljZklxHCOCAJFJrImO5ZLKPJVJlVUcs8yFwNQlqS0Lo8xT1VAXXTCZocF9n26FWEKsw==}
@@ -1534,38 +1546,38 @@ packages:
   '@livekit/protocol@1.43.4':
     resolution: {integrity: sha512-mJDFt/p+G2OKmIGizYiACK7Jb06wd42m9Pe7Y9cAOfdYpvwCqHlw4yul5Z7iRU3VKPsYJ27WL3oeHEoiu+HuAA==}
 
-  '@livekit/rtc-node-darwin-arm64@0.13.21':
-    resolution: {integrity: sha512-ECR7KyVeFmb6XOaRK7wE/O3MWv7Wk99oDJbiZDHBR6VFPWSYBPyfZYNUp+2HVugd12iderdWn3aQ/b3us//MTQ==}
+  '@livekit/rtc-node-darwin-arm64@0.13.22':
+    resolution: {integrity: sha512-eGjIAHoUtLYAQN1pbRLH59j++vTYFF+zHxENhTEQJ4d8NBqibTeD86ftd/F+QoAg+tKfmasrieIcNu9Ck5oRTg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@livekit/rtc-node-darwin-x64@0.13.21':
-    resolution: {integrity: sha512-A2wIfyDFws7HMotehbW8RupYiTCn8KqzrEQ/2Y8lteTRQakmYHqic7XSv1I89zs9PpK1Dh+N1ufh5IprsRVjNg==}
+  '@livekit/rtc-node-darwin-x64@0.13.22':
+    resolution: {integrity: sha512-ZeywKqFqmfe+BWH2KKea+s5WD/3yq93zsomYzBzzfsHGehiJMvsTbSUcznzs+eY5vRLu7zYMYHsYYa2XAJp8pw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@livekit/rtc-node-linux-arm64-gnu@0.13.21':
-    resolution: {integrity: sha512-qkLHtp36gsfH750YmAklnE1m/rhuG1UwteO4eSTifiMNe7F9bKLlY95k6/eKphlYZObLGR+xkLLF6a8REuiaFQ==}
+  '@livekit/rtc-node-linux-arm64-gnu@0.13.22':
+    resolution: {integrity: sha512-WVCWkImhoQC2eC+zofhbFq2HyGjkhqgTrClosrWcCvU6a1d56wMaCnVvG34xZ+30v+p/pYdE+QAP7ngdACfJjg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
 
-  '@livekit/rtc-node-linux-x64-gnu@0.13.21':
-    resolution: {integrity: sha512-OeU8AQJGOjRvkYTg2kF9PjMqCP4OGVEPx3Yaz8rz3QDJGC6Qgxj9H1IZwp8rbtzSuMiF7KP0XogcChyEyk1hqg==}
+  '@livekit/rtc-node-linux-x64-gnu@0.13.22':
+    resolution: {integrity: sha512-cykrWbvthtTzqi+4+3G8vN1vvs+9F/r7VZQbrXY/wExTWCnogKqyEPQtgfT3P2joOLZ9rAVT7kmUMSxkN8y+Xg==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
 
-  '@livekit/rtc-node-win32-x64-msvc@0.13.21':
-    resolution: {integrity: sha512-dohFbEP6UHgqSHru1ijDCS3p5ODY93LJQ1PSFcilxteSfRoS6DQuxKsrqoYo5OJfPF0wO7Gdn3lpxyvXYLF/lw==}
+  '@livekit/rtc-node-win32-x64-msvc@0.13.22':
+    resolution: {integrity: sha512-StbHpNjRBKtti4u7f8p6r+59gaHEM2M5dekUvMM/jOd5uiEygg8UNV1UeJZlpWYlDVBK3GtY99AzoEG6SJZmbw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
 
-  '@livekit/rtc-node@0.13.21':
-    resolution: {integrity: sha512-2PFF6nevNJbxMNOHEKtwabY/qACRyQ8omnPTt7qUc5Nn1YTvPwkD7/5FtKf25rrr8GGGZiXlRWS/YO0NmPV9cg==}
+  '@livekit/rtc-node@0.13.22':
+    resolution: {integrity: sha512-VkDVu+KA+pJDSQ7d4pf5SGLtZc+qDHi2zXo/zYyisfrQVO6Sjb0/0LN8IYC283YfAlOayj9BBlU6p7pP6F7o1A==}
     engines: {node: '>= 18'}
 
   '@livekit/typed-emitter@3.0.0':
@@ -2600,6 +2612,10 @@ packages:
 
   '@types/dom-speech-recognition@0.0.7':
     resolution: {integrity: sha512-NjiUoJbBlKhyufNsMZLSp+pbPNtPAFnR738RCJvtZy/HVQ2TZjmqpMyaeOSMXgxdfZM60nt8QGbtfmQrJAH2sw==}
+
+  '@types/dotenv@8.2.3':
+    resolution: {integrity: sha512-g2FXjlDX/cYuc5CiQvyU/6kkbP1JtmGzh0obW50zD7OKeILVL0NSpPWLXVfqoAGQjom2/SLLx9zHq0KXvD6mbw==}
+    deprecated: This is a stub types definition. dotenv provides its own type definitions, so you do not need this installed.
 
   '@types/estree-jsx@1.0.5':
     resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
@@ -6460,6 +6476,8 @@ snapshots:
       '@types/conventional-commits-parser': 5.0.2
       chalk: 5.6.2
 
+  '@datastructures-js/deque@1.0.8': {}
+
   '@emnapi/core@1.7.0':
     dependencies:
       '@emnapi/wasi-threads': 1.1.0
@@ -7034,20 +7052,20 @@ snapshots:
       '@langchain/core': 1.0.2(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.54.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.2.0(@opentelemetry/api@1.9.0))(openai@6.10.0(ws@8.18.3)(zod@4.1.12))
       js-tiktoken: 1.0.21
 
-  '@livekit/agents-plugin-deepgram@1.0.24(@livekit/agents@1.0.24(@livekit/rtc-node@0.13.21)(zod@4.1.12))(@livekit/rtc-node@0.13.21)':
+  '@livekit/agents-plugin-deepgram@1.0.24(@livekit/agents@1.0.24(@livekit/rtc-node@0.13.22)(zod@4.1.12))(@livekit/rtc-node@0.13.22)':
     dependencies:
-      '@livekit/agents': 1.0.24(@livekit/rtc-node@0.13.21)(zod@4.1.12)
-      '@livekit/rtc-node': 0.13.21
+      '@livekit/agents': 1.0.24(@livekit/rtc-node@0.13.22)(zod@4.1.12)
+      '@livekit/rtc-node': 0.13.22
       ws: 8.18.3
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@livekit/agents-plugin-openai@1.0.24(@livekit/agents@1.0.24(@livekit/rtc-node@0.13.21)(zod@4.1.12))(@livekit/rtc-node@0.13.21)(zod@4.1.12)':
+  '@livekit/agents-plugin-openai@1.0.24(@livekit/agents@1.0.24(@livekit/rtc-node@0.13.22)(zod@4.1.12))(@livekit/rtc-node@0.13.22)(zod@4.1.12)':
     dependencies:
-      '@livekit/agents': 1.0.24(@livekit/rtc-node@0.13.21)(zod@4.1.12)
+      '@livekit/agents': 1.0.24(@livekit/rtc-node@0.13.22)(zod@4.1.12)
       '@livekit/mutex': 1.1.1
-      '@livekit/rtc-node': 0.13.21
+      '@livekit/rtc-node': 0.13.22
       openai: 6.8.1(ws@8.18.3)(zod@4.1.12)
       ws: 8.18.3
     transitivePeerDependencies:
@@ -7055,12 +7073,12 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@livekit/agents@1.0.24(@livekit/rtc-node@0.13.21)(zod@4.1.12)':
+  '@livekit/agents@1.0.24(@livekit/rtc-node@0.13.22)(zod@4.1.12)':
     dependencies:
       '@ffmpeg-installer/ffmpeg': 1.1.0
       '@livekit/mutex': 1.1.1
       '@livekit/protocol': 1.43.4
-      '@livekit/rtc-node': 0.13.21
+      '@livekit/rtc-node': 0.13.22
       '@livekit/typed-emitter': 3.0.0
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/api-logs': 0.54.2
@@ -7127,34 +7145,35 @@ snapshots:
     dependencies:
       '@bufbuild/protobuf': 1.10.1
 
-  '@livekit/rtc-node-darwin-arm64@0.13.21':
+  '@livekit/rtc-node-darwin-arm64@0.13.22':
     optional: true
 
-  '@livekit/rtc-node-darwin-x64@0.13.21':
+  '@livekit/rtc-node-darwin-x64@0.13.22':
     optional: true
 
-  '@livekit/rtc-node-linux-arm64-gnu@0.13.21':
+  '@livekit/rtc-node-linux-arm64-gnu@0.13.22':
     optional: true
 
-  '@livekit/rtc-node-linux-x64-gnu@0.13.21':
+  '@livekit/rtc-node-linux-x64-gnu@0.13.22':
     optional: true
 
-  '@livekit/rtc-node-win32-x64-msvc@0.13.21':
+  '@livekit/rtc-node-win32-x64-msvc@0.13.22':
     optional: true
 
-  '@livekit/rtc-node@0.13.21':
+  '@livekit/rtc-node@0.13.22':
     dependencies:
       '@bufbuild/protobuf': 1.10.1
+      '@datastructures-js/deque': 1.0.8
       '@livekit/mutex': 1.1.1
       '@livekit/typed-emitter': 3.0.0
       pino: 9.14.0
       pino-pretty: 13.1.3
     optionalDependencies:
-      '@livekit/rtc-node-darwin-arm64': 0.13.21
-      '@livekit/rtc-node-darwin-x64': 0.13.21
-      '@livekit/rtc-node-linux-arm64-gnu': 0.13.21
-      '@livekit/rtc-node-linux-x64-gnu': 0.13.21
-      '@livekit/rtc-node-win32-x64-msvc': 0.13.21
+      '@livekit/rtc-node-darwin-arm64': 0.13.22
+      '@livekit/rtc-node-darwin-x64': 0.13.22
+      '@livekit/rtc-node-linux-arm64-gnu': 0.13.22
+      '@livekit/rtc-node-linux-x64-gnu': 0.13.22
+      '@livekit/rtc-node-win32-x64-msvc': 0.13.22
 
   '@livekit/typed-emitter@3.0.0': {}
 
@@ -8140,6 +8159,10 @@ snapshots:
   '@types/dom-mediacapture-record@1.0.22': {}
 
   '@types/dom-speech-recognition@0.0.7': {}
+
+  '@types/dotenv@8.2.3':
+    dependencies:
+      dotenv: 17.2.3
 
   '@types/estree-jsx@1.0.5':
     dependencies:

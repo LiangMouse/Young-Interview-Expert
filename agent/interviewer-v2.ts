@@ -23,7 +23,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { z } from "zod";
 
-import { saveMessage, fetchConversationHistory } from "./utils";
+import { fetchConversationHistory } from "./utils";
 import { STT } from "@livekit/agents-plugin-deepgram";
 import { LLM, TTS } from "@livekit/agents-plugin-openai";
 import { RoomEvent } from "livekit-client";
@@ -395,75 +395,7 @@ export default {
           if (message?.type === "user_text") {
             const userText = message.text;
             console.log("[interviewer] received text message:", userText);
-
-            if (userText) {
-              console.log("DEBUG: Processing User Text");
-              if (currentInterviewId) {
-                // await saveMessage(currentInterviewId, "user", userText).catch(e => console.warn("Save user msg failed:", e.message));
-                console.log("DEBUG: Skipped SaveMessage");
-              }
-
-              // 1. 调用 LLM
-              let aiText = "";
-              try {
-                console.log("DEBUG: REACHED LLM BLOCK");
-                console.log("Calling LLM...");
-                // 使用 any 绕过类型检查，构建 OpenAI 风格的消息数组
-                const rawMessages = [
-                  { role: "system", content: SYSTEM_PROMPT },
-                  { role: "user", content: userText },
-                ];
-
-                // 尝试直接传递，如果不兼容，可能需要 check SDK 源码。
-                // 但这是目前最可能的兼容方式
-                const stream = await (chatLlm as any).chat({
-                  messages: rawMessages,
-                  chatCtx: { messages: rawMessages }, // 猜测可能的参数名
-                });
-
-                for await (const chunk of stream) {
-                  const c = chunk as any;
-                  const content =
-                    c.choices?.[0]?.delta?.content ?? c.content ?? "";
-                  if (content) aiText += content;
-                }
-                console.log("LLM Response:", aiText);
-                if (currentInterviewId) {
-                  // await saveMessage(currentInterviewId, "assistant", aiText).catch(e => console.warn("Save AI msg failed:", e.message));
-                }
-              } catch (e) {
-                console.error("LLM Error:", e);
-                aiText = "抱歉，我的大脑此时有点短路，请稍后再试。";
-              }
-
-              // 2. 尝试语音
-              if (agent && aiText) {
-                try {
-                  // @ts-ignore
-                  if (typeof agent.say === "function") await agent.say(aiText);
-                } catch (e) {
-                  console.debug("Agent speak failed", e);
-                }
-              }
-
-              // 3. 回发文本
-              const responsePayload = JSON.stringify({
-                type: "agent_text",
-                text: aiText,
-                timestamp: Date.now(),
-              });
-              const encoder = new TextEncoder();
-              // @ts-ignore
-              if (ctx.room?.localParticipant) {
-                await ctx.room.localParticipant.publishData(
-                  encoder.encode(responsePayload),
-                  {
-                    reliable: true,
-                    topic: "lk-chat-topic",
-                  },
-                );
-              }
-            }
+            console.log("DEBUG: SUPER SIMPLE TEST - NO LOGIC RUNNING");
           }
         } catch (err) {
           console.warn("[interviewer] failed to parse data message", err);
@@ -489,7 +421,7 @@ const isMainModule =
   process.argv[1].endsWith(path.basename(fileURLToPath(import.meta.url)));
 
 if (isMainModule || require.main === module) {
-  console.log("AGENT VERSION: DEBUG-003");
+  console.log("AGENT VERSION: DEBUG-004-FRESH-FILE");
   const key = process.env.LIVEKIT_API_KEY;
   console.log(
     `[Startup] Loading with LiveKit Key: ${key ? key.substring(0, 4) + "***" : "UNDEFINED"}`,

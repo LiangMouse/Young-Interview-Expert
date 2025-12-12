@@ -109,10 +109,6 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
         // 自动管理订阅的媒体轨道
         adaptiveStream: true,
         // 启用断线重连
-        reconnectPolicy: {
-          maxRetries: 5,
-          retryDelays: [1000, 2000, 4000, 8000, 16000],
-        },
       });
 
       roomRef.current = room;
@@ -217,7 +213,7 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
     const encoder = new TextEncoder();
     await roomRef.current.localParticipant.publishData(
       encoder.encode(payload),
-      { reliable: true },
+      { reliable: true, topic: "lk-chat-topic" },
     );
 
     // 立即添加到本地转录
@@ -312,6 +308,43 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
           isUserSpeaking: userSpeaking,
         }));
       });
+
+      // 接收 Data 消息（用于 Agent 文本回复）
+      room.on(
+        RoomEvent.DataReceived,
+        (
+          payload: Uint8Array,
+          participant?: RemoteParticipant,
+          kind?: any,
+          topic?: string,
+        ) => {
+          if (topic !== "lk-chat-topic") return; // 过滤 topic
+
+          try {
+            const decoder = new TextDecoder();
+            const str = decoder.decode(payload);
+            const msg = JSON.parse(str);
+
+            if (msg.type === "agent_text" && msg.text) {
+              setState((prev) => ({
+                ...prev,
+                transcript: [
+                  ...prev.transcript,
+                  {
+                    id: `agent-${Date.now()}`,
+                    role: "agent",
+                    text: msg.text,
+                    timestamp: Date.now(),
+                    isFinal: true,
+                  },
+                ],
+              }));
+            }
+          } catch (e) {
+            console.warn("Failed to parse data message", e);
+          }
+        },
+      );
 
       // 接收 LiveKit Agents 转录事件
       // 这是 Agent 端 STT 产生的实时转录

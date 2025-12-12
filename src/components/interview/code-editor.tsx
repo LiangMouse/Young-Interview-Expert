@@ -72,14 +72,31 @@ export function CodeEditor() {
 }
 
 function highlightSyntax(line: string): string {
-  // Simple syntax highlighting
-  return line
-    .replace(
-      /\b(function|const|let|var|return|if|else|while|for|null)\b/g,
-      '<span style="color: #C586C0">$1</span>',
-    )
-    .replace(/\b(true|false)\b/g, '<span style="color: #4FC1FF">$1</span>')
-    .replace(/"([^"]*)"/g, '<span style="color: #CE9178">"$1"</span>')
-    .replace(/\/\/(.*)/g, '<span style="color: #6A9955">//$1</span>')
-    .replace(/\b(\d+)\b/g, '<span style="color: #B5CEA8">$1</span>');
+  // Escape HTML characters first for safety
+  const escaped = line
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Single regex to match strings, comments, keywords, booleans, and numbers
+  // Order matters: Strings and comments effectively "consume" the text so keywords inside them aren't matched.
+  const tokenRegex =
+    /("[^"]*"|\/\/.*|\b(?:function|const|let|var|return|if|else|while|for|null)\b|\b(?:true|false)\b|\b\d+\b)/g;
+
+  return escaped.replace(tokenRegex, (match) => {
+    let color = "";
+    if (match.startsWith('"')) {
+      color = "#CE9178"; // Strings
+    } else if (match.startsWith("//")) {
+      color = "#6A9955"; // Comments
+    } else if (/^\d+$/.test(match)) {
+      color = "#B5CEA8"; // Numbers
+    } else if (/^(true|false)$/.test(match)) {
+      color = "#4FC1FF"; // Booleans
+    } else {
+      color = "#C586C0"; // Keywords
+    }
+
+    return `<span style="color: ${color}">${match}</span>`;
+  });
 }

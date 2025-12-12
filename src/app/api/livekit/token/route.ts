@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { AccessToken } from "livekit-server-sdk";
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 // LiveKit 配置（从环境变量读取）
 const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取当前用户信息
-    const supabase = await createServerClient();
+    const supabase = await createClient();
     const {
       data: { user },
       error: authError,
