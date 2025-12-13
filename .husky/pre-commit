@@ -12,4 +12,13 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# 运行单元测试
+echo "🧪 Running unit tests..."
+pnpm test
+
+if [ $? -ne 0 ]; then
+  echo "❌ Unit tests failed! Please fix them before committing."
+  exit 1
+fi
+
 echo "✅ Pre-commit checks passed!"
