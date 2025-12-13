@@ -1,5 +1,6 @@
 import { ILLMService, ChatMessage } from "../interfaces";
-import * as llm from "@livekit/agents-plugin-openai";
+import * as openaiPlugin from "@livekit/agents-plugin-openai";
+import { llm } from "@livekit/agents";
 
 interface OpenAILLMOptions {
   apiKey: string;
@@ -9,10 +10,10 @@ interface OpenAILLMOptions {
 }
 
 export class OpenAILLMAdapter implements ILLMService {
-  private llmInstance: llm.LLM;
+  private llmInstance: openaiPlugin.LLM;
 
   constructor(options: OpenAILLMOptions) {
-    this.llmInstance = new llm.LLM({
+    this.llmInstance = new openaiPlugin.LLM({
       apiKey: options.apiKey,
       model: options.model,
       baseURL: options.baseURL,
@@ -37,7 +38,8 @@ export class OpenAILLMAdapter implements ILLMService {
     const stream = await this.llmInstance.chat({ chatCtx });
 
     for await (const chunk of stream) {
-      const content = chunk.delta?.content ?? "";
+      const c = chunk as any;
+      const content = c.choices?.[0]?.delta?.content ?? c.content ?? "";
       if (content) {
         yield content;
       }

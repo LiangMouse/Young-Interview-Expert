@@ -1,10 +1,12 @@
 import type { UserProfile } from "@/types/profile";
 import { createClient } from "@/lib/supabase/server";
 import { OpenAIEmbeddings } from "@langchain/openai";
+import { Embeddings } from "@langchain/core/embeddings";
 import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
 import { Document } from "@langchain/core/documents";
-// @ts-expect-error - keyword-extractor 没有类型定义
-import keywordExtractor from "keyword-extractor";
+import { v4 as uuidv4 } from "uuid";
+
+// import keywordExtractor from "keyword-extractor";
 import {
   sanitizeProfileData,
   sanitizeRAGQuery,
@@ -171,6 +173,11 @@ export async function storeVectorDocuments(
   const supabase = await createClient();
   const embeddings = getEmbeddings();
 
+  if (!embeddings) {
+    console.warn("⚠️ [RAG] 未配置 Embedding 服务，跳过向量存储");
+    return;
+  }
+
   try {
     // 先删除该用户的所有旧向量
     // 使用 RPC 函数清理（如果存在），否则使用直接删除
@@ -199,25 +206,36 @@ export async function storeVectorDocuments(
     }
 
     // 转换为LangChain Document格式
-    const langchainDocs = documents.map(
-      (doc) =>
-        new Document({
-          pageContent: doc.content,
-          metadata: {
-            ...doc.metadata,
-            user_id: userId,
-            doc_id: doc.id,
-          },
-        }),
-    );
+    // 注意：我们不再使用 SupabaseVectorStore.fromDocuments，因为它无法正确处理 user_id 列的插入
+    // 而是直接生成 embedding 并通过 supabase 客户端插入
 
-    // 使用SupabaseVectorStore自动处理embedding和存储
-    // 批量生成embedding并插入（LangChain自动处理）
-    await SupabaseVectorStore.fromDocuments(langchainDocs, embeddings, {
-      client: supabase,
-      tableName: "user_profile_vectors",
-      queryName: "match_user_profile_vectors",
-    });
+    // 1. 准备文本列表
+    const texts = documents.map((doc) => doc.content);
+
+    // 2. 批量生成 Embedding
+    const vectors = await embeddings.embedDocuments(texts);
+
+    // 3. 构建插入数据
+    const rows = documents.map((doc, index) => ({
+      id: uuidv4(), // 生成 UUID，解决数据库 id 非空限制
+      content: doc.content,
+      metadata: {
+        ...doc.metadata,
+        doc_id: doc.id,
+      },
+      embedding: vectors[index], // 直接使用生成的向量
+      user_id: userId, // 显式设置 user_id，解决 RLS 问题
+    }));
+
+    // 4. 批量插入数据库
+    const { error: insertError } = await supabase
+      .from("user_profile_vectors")
+      .insert(rows);
+
+    if (insertError) {
+      console.error("Error inserting vectors:", insertError);
+      throw insertError;
+    }
   } catch (error) {
     console.error("Error storing vector documents:", error);
     throw error;
@@ -234,6 +252,11 @@ export async function retrieveRelevantDocuments(
 ): Promise<VectorDocument[]> {
   const supabase = await createClient();
   const embeddings = getEmbeddings();
+
+  if (!embeddings) {
+    console.warn("⚠️ [RAG] 未配置 Embedding 服务，跳过文档检索");
+    return [];
+  }
 
   try {
     // 清理查询文本，防止注入
@@ -343,7 +366,7 @@ ${doc.content}
 
 请以JSON格式输出分析结果，包含：
 - candidateAnalysis: 候选人分析
-- interviewStrategy: 面试策略  
+- interviewStrategy: 面试策略
 - nextQuestion: 下一个最重要的单个问题（不是问题列表）
 - riskPoints: 需要注意的风险点
 - questionRationale: 为什么选择这个问题的理由
@@ -404,46 +427,140 @@ export async function performIntelligentAnalysis(
 }
 
 /**
+ * 自定义 Minimax Embedding 适配器
+ * 用于解决 Minimax API 与 LangChain OpenAIEmbeddings 的兼容性问题
+ */
+class MinimaxEmbeddingsAdapter extends Embeddings {
+  private apiKey: string;
+  private model: string;
+  private baseUrl: string;
+
+  constructor(fields: { apiKey: string; model?: string; baseUrl?: string }) {
+    super({}); // LangChain Embeddings base class expects AsyncCallerParams
+    this.apiKey = fields.apiKey;
+    this.model = fields.model || "embo-01";
+    this.baseUrl = fields.baseUrl || "https://api.minimax.chat/v1";
+  }
+
+  async embedDocuments(documents: string[]): Promise<number[][]> {
+    return this.callMinimaxApi(documents, "db");
+  }
+
+  async embedQuery(document: string): Promise<number[]> {
+    const results = await this.callMinimaxApi([document], "query");
+    return results[0];
+  }
+
+  private async callMinimaxApi(
+    texts: string[],
+    type: "db" | "query",
+  ): Promise<number[][]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/embeddings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          texts: texts, // Minimax 使用 texts 参数
+          type: type, // db 或 query
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Minimax API error: ${response.status} ${response.statusText} - ${errorText}`,
+        );
+      }
+
+      const data = await response.json();
+
+      // 处理 Minimax 响应格式
+      // 官方文档: { vectors: [[...]], base_resp: {...} }
+      if (data.vectors && Array.isArray(data.vectors)) {
+        return data.vectors;
+      }
+
+      // 尝试兼容 OpenAI 格式
+      if (data.data && Array.isArray(data.data)) {
+        return data.data.map((item: any) => item.embedding);
+      }
+
+      console.error(
+        "Unexpected Minimax response format:",
+        JSON.stringify(data),
+      );
+      throw new Error("Invalid response format from Minimax API");
+    } catch (error) {
+      console.error("Error calling Minimax Embedding API:", error);
+      throw error;
+    }
+  }
+}
+
+/**
  * 获取Embeddings实例（单例）
  */
-let embeddingsInstance: OpenAIEmbeddings | null = null;
+let embeddingsInstance: Embeddings | null = null;
+let hasCheckedApiKey = false;
 
-function getEmbeddings(): OpenAIEmbeddings {
-  if (!embeddingsInstance) {
-    embeddingsInstance = new OpenAIEmbeddings({
-      modelName: "deepseek-coder",
-      openAIApiKey: process.env.DEEPSEEK_V3_API,
-      configuration: {
-        baseURL: "https://api.deepseek.com/v1",
-      },
-    });
+function getEmbeddings(): Embeddings | null {
+  // 优先使用 Minimax
+  if (process.env.MINIMAX_API_KEY) {
+    if (
+      !embeddingsInstance ||
+      !(embeddingsInstance instanceof MinimaxEmbeddingsAdapter)
+    ) {
+      console.log("🚀 [RAG] 使用 Minimax Embedding (embo-01) via Adapter");
+      embeddingsInstance = new MinimaxEmbeddingsAdapter({
+        apiKey: process.env.MINIMAX_API_KEY,
+        model: "embo-01",
+      });
+    }
+    return embeddingsInstance;
   }
-  return embeddingsInstance;
+
+  // 降级到 OpenAI
+  if (process.env.OPENAI_API_KEY) {
+    if (
+      !embeddingsInstance ||
+      !(embeddingsInstance instanceof OpenAIEmbeddings)
+    ) {
+      console.log("🚀 [RAG] 使用 OpenAI Embedding (text-embedding-3-small)");
+      embeddingsInstance = new OpenAIEmbeddings({
+        modelName: "text-embedding-3-small",
+        openAIApiKey: process.env.OPENAI_API_KEY,
+      });
+    }
+    return embeddingsInstance;
+  }
+
+  if (!hasCheckedApiKey) {
+    console.warn(
+      "⚠️ [RAG] 未找到 MINIMAX_API_KEY 或 OPENAI_API_KEY，向量化功能将跳过。",
+    );
+    hasCheckedApiKey = true;
+  }
+  return null;
 }
 
 /**
  * 提取关键词（使用专业库）
  */
 function extractKeywords(text: string): string[] {
-  try {
-    // 使用 keyword-extractor 专业库
-    const keywords = keywordExtractor.extract(text, {
-      language: "chinese",
-      remove_digits: false,
-      return_changed_case: true,
-      remove_duplicates: true,
-    });
-    return keywords.slice(0, 20); // 限制数量
-  } catch (error) {
-    console.error("Error extracting keywords:", error);
-    // fallback到简单实现
-    const words = text
-      .toLowerCase()
-      .replace(/[^\w\s\u4e00-\u9fff]/g, " ")
-      .split(/\s+/)
-      .filter((word) => word.length > 1);
-    return [...new Set(words)].slice(0, 20);
-  }
+  // 简单分词实现（支持中英文）
+  // 移除 keyword-extractor 依赖，因为它不支持中文且会导致运行时错误
+  const words = text
+    .toLowerCase()
+    .replace(/[^\w\s\u4e00-\u9fff]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 1);
+
+  // 去重并限制数量
+  return [...new Set(words)].slice(0, 20);
 }
 
 /**

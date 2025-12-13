@@ -3,6 +3,7 @@ import { STT } from "@livekit/agents-plugin-deepgram";
 import { stt as STTLib } from "@livekit/agents";
 import { AudioFrame } from "@livekit/rtc-node";
 import EventEmitter from "events";
+import { TECH_VOCABULARY } from "../constants/vocabulary";
 
 export class DeepgramSTTService extends EventEmitter implements ISTTService {
   private sttInstance: STT;
@@ -14,7 +15,9 @@ export class DeepgramSTTService extends EventEmitter implements ISTTService {
       apiKey,
       language: "zh",
       model: "nova-2-general",
-      smart_format: true,
+      smartFormat: true,
+      // @ts-ignore
+      keyterms: TECH_VOCABULARY,
     });
 
     this.startStream();

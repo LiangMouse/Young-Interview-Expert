@@ -40,6 +40,11 @@ export class InterviewAgent extends EventEmitter {
     this.setState("LISTENING");
   }
 
+  public updateSystemPrompt(newPrompt: string) {
+    this.systemPrompt = newPrompt;
+    console.log("[Agent] System Prompt updated.");
+  }
+
   private setState(newState: AgentState) {
     if (this._state === newState) return;
     console.log(`[Agent] State Transition: ${this._state} -> ${newState}`);

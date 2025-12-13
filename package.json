@@ -12,7 +12,7 @@
     "prepare": "husky install",
     "commit": "git-cz",
     "test": "vitest run",
-    "agent:dev": "dotenv -e .env.local -- tsx watch agent/simple-agent.ts dev"
+    "agent:dev": "dotenv -e .env.local -- tsx watch agent/main.ts dev"
   },
   "config": {
     "commitizen": {
@@ -105,6 +105,9 @@
     "@eslint/eslintrc": "^3",
     "@eslint/js": "^9.39.1",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/dotenv": "^8.2.3",
     "@types/node": "^20",
     "@types/pdf-parse": "^1.1.5",
@@ -113,6 +116,7 @@
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.44.1",
     "@typescript-eslint/parser": "^8.44.1",
+    "@vitejs/plugin-react": "^5.1.2",
     "commitizen": "^4.3.1",
     "cz-git": "^1.12.0",
     "dotenv-cli": "^11.0.0",

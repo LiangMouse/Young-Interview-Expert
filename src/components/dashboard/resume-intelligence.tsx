@@ -23,7 +23,9 @@ import {
   CheckCircle2,
   Save,
   Trash2,
+  File as FileIcon,
 } from "lucide-react";
+import { PREDEFINED_SKILLS } from "@/lib/constants";
 import { useTranslations } from "next-intl";
 import { uploadResume } from "@/action/upload-resume";
 import { updateUserProfile } from "@/action/user-profile";
@@ -59,6 +61,9 @@ export function ResumeIntelligence() {
     "idle" | "uploading" | "parsing" | "success" | "error"
   >("idle");
 
+  // 技能补全状态
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   // 保存状态
   const [isSaving, setIsSaving] = useState(false);
 
@@ -91,7 +96,16 @@ export function ResumeIntelligence() {
   const handleDropAccepted = useCallback(
     async (files: File[]) => {
       const file = files[0];
-      if (!file) return;
+      if (!file) {
+        console.warn("📤 [简历上传] 未检测到文件");
+        return;
+      }
+
+      console.log("📤 [简历上传] 开始上传", {
+        fileName: file.name,
+        fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+        fileType: file.type,
+      });
 
       setUploadedFile(file);
       setIsUploading(true);
@@ -102,10 +116,18 @@ export function ResumeIntelligence() {
         const formData = new FormData();
         formData.append("file", file);
 
+        console.log("🤖 [简历上传] 开始 AI 解析...");
         setUploadStatus("parsing");
         const result = await uploadResume(formData);
 
+        console.log("📊 [简历上传] 服务端返回结果:", {
+          success: result.success,
+          hasData: !!result.data,
+          error: result.error,
+        });
+
         if (!result.success) {
+          console.error("❌ [简历上传] 上传失败:", result.error);
           toast.error(result.error || "上传失败");
           setUploadStatus("error");
           return;
@@ -113,29 +135,86 @@ export function ResumeIntelligence() {
 
         // 更新 store 中的用户信息，并同步到表单
         if (result.data) {
+          console.log("✅ [简历上传] 开始填充表单数据", {
+            jobIntention: result.data.job_intention,
+            experienceYears: result.data.experience_years,
+            skillsCount: result.data.skills?.length || 0,
+            workExperiencesCount: result.data.work_experiences?.length || 0,
+          });
+
+          // 更新全局 store
           setUserInfo(result.data);
+          console.log("🔄 [简历上传] 全局 store 已更新");
+
           // 自动填充表单数据
           if (result.data.job_intention) {
             setJobIntention(result.data.job_intention);
+            console.log(
+              "💼 [简历上传] 目标岗位已填充:",
+              result.data.job_intention,
+            );
           }
+
           if (
             result.data.experience_years !== null &&
             result.data.experience_years !== undefined
           ) {
             setExperienceYears(result.data.experience_years);
+            console.log(
+              "📅 [简历上传] 工作年限已填充:",
+              result.data.experience_years,
+            );
           }
+
           if (result.data.skills) {
             setTechStack(result.data.skills);
+            console.log(
+              "🛠️ [简历上传] 技能栈已填充:",
+              result.data.skills.join(", "),
+            );
           }
+
+          // 重点：工作经历填充
           if (result.data.work_experiences) {
+            console.log("📝 [简历上传] 开始填充工作经历", {
+              count: result.data.work_experiences.length,
+              data: result.data.work_experiences,
+            });
+
             setWorkExperiences(result.data.work_experiences);
+
+            // 验证是否填充成功
+            console.log(
+              "✅ [简历上传] 工作经历状态已更新，当前数量:",
+              result.data.work_experiences.length,
+            );
+
+            // 逐条打印工作经历详情
+            result.data.work_experiences.forEach(
+              (exp: WorkExperience, index: number) => {
+                console.log(
+                  `   ${index + 1}. ${exp.position} @ ${exp.company}`,
+                  {
+                    startDate: exp.start_date,
+                    endDate: exp.end_date,
+                    descriptionLength: exp.description?.length || 0,
+                  },
+                );
+              },
+            );
+          } else {
+            console.warn("⚠️ [简历上传] 未解析到工作经历数据");
           }
+        } else {
+          console.warn("⚠️ [简历上传] 服务端返回数据为空");
         }
 
         toast.success("简历解析成功，信息已自动填充");
         setUploadStatus("success");
+        console.log("✨ [简历上传] 完成！");
       } catch (err) {
-        console.error("Failed to upload resume:", err);
+        console.error("❌ [简历上传] 发生异常:", err);
+        console.error("异常堆栈:", err instanceof Error ? err.stack : "无堆栈");
         toast.error("上传失败，请重试");
         setUploadStatus("error");
       } finally {
@@ -158,11 +237,45 @@ export function ResumeIntelligence() {
 
   const handleAddSkill = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && newSkill.trim()) {
-      if (!techStack.includes(newSkill.trim())) {
-        setTechStack([...techStack, newSkill.trim()]);
+      e.preventDefault();
+      // 只能添加白名单内的技能
+      const match = PREDEFINED_SKILLS.find(
+        (s) => s.toLowerCase() === newSkill.trim().toLowerCase(),
+      );
+
+      if (match) {
+        if (!techStack.includes(match)) {
+          setTechStack([...techStack, match]);
+        }
+        setNewSkill("");
+        setShowSuggestions(false);
+      } else {
+        // 如果输入不完全匹配，但 suggestions 里有第一个匹配项，也可以自动选用？
+        // 用户要求严格，且要支持自动补全。通常回车表示确认。
+        // 我们这里允许用户通过匹配第一项来快速添加，但要基于过滤结果
+        const filtered = PREDEFINED_SKILLS.filter((s) =>
+          s.toLowerCase().startsWith(newSkill.trim().toLowerCase()),
+        );
+        if (filtered.length > 0) {
+          const bestMatch = filtered[0];
+          if (!techStack.includes(bestMatch)) {
+            setTechStack([...techStack, bestMatch]);
+          }
+          setNewSkill("");
+          setShowSuggestions(false);
+        } else {
+          toast.error("只能添加列表中的预定义技能");
+        }
       }
-      setNewSkill("");
     }
+  };
+
+  const selectSuggestion = (skill: string) => {
+    if (!techStack.includes(skill)) {
+      setTechStack([...techStack, skill]);
+    }
+    setNewSkill("");
+    setShowSuggestions(false);
   };
 
   const handleRemoveSkill = (skillToRemove: string) => {
@@ -400,14 +513,58 @@ export function ResumeIntelligence() {
               </Badge>
             ))}
           </div>
-          <Input
-            id="tech-stack"
-            placeholder={t("typeSkillHint")}
-            value={newSkill}
-            onChange={(e) => setNewSkill(e.target.value)}
-            onKeyDown={handleAddSkill}
-            className="border-[#E5E5E5] bg-white"
-          />
+          <div className="relative">
+            <Input
+              id="tech-stack"
+              placeholder={t("typeSkillHint")}
+              value={newSkill}
+              onChange={(e) => {
+                setNewSkill(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => {
+                // 延迟关闭，以便点击事件能触发
+                setTimeout(() => setShowSuggestions(false), 200);
+              }}
+              onKeyDown={handleAddSkill}
+              className="border-[#E5E5E5] bg-white"
+              autoComplete="off"
+            />
+            {/* 自动补全下拉列表 */}
+            {showSuggestions && newSkill && (
+              <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-slate-200 bg-white shadow-lg">
+                {PREDEFINED_SKILLS.filter(
+                  (skill) =>
+                    skill.toLowerCase().includes(newSkill.toLowerCase()) &&
+                    !techStack.includes(skill),
+                ).length > 0 ? (
+                  <ul className="py-1">
+                    {PREDEFINED_SKILLS.filter(
+                      (skill) =>
+                        skill.toLowerCase().includes(newSkill.toLowerCase()) &&
+                        !techStack.includes(skill),
+                    ).map((skill) => (
+                      <li
+                        key={skill}
+                        className="cursor-pointer px-4 py-2 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // 防止 input blur
+                          selectSuggestion(skill);
+                        }}
+                      >
+                        {skill}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="px-4 py-2 text-sm text-slate-400">
+                    无匹配技能
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <p className="text-xs text-[#666666]">{t("pressEnterHint")}</p>
         </div>
 

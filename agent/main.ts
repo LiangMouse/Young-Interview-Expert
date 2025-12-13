@@ -11,6 +11,17 @@ import * as dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { LiveKitBridge } from "./src/bridge/livekit-impl";
 
+// Global Error Handlers
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("❌ Uncaught Exception:", error);
+  // Optional: exit process if in production to let orchestrator restart
+  // process.exit(1);
+});
+
 // 加载环境变量
 dotenv.config({ path: ".env.local" });
 

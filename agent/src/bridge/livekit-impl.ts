@@ -12,6 +12,7 @@ import { DeepgramSTTService } from "../services/deepgram-stt";
 import { DebouncedSTTService } from "../services/debounced-stt";
 import { OpenAILLMAdapter } from "../services/openai-llm";
 import { MiniMaxTTSAdapter } from "../services/minimax-tts";
+import { loadUserContext, buildSystemPrompt } from "../services/context-loader";
 
 export class LiveKitBridge {
   private room: Room;
@@ -115,6 +116,48 @@ export class LiveKitBridge {
         // We should expose one in InterviewAgent if we support text chat.
       }
     });
+
+    // --- User Context Injection ---
+    this.room.on(RoomEvent.ParticipantConnected, async (participant) => {
+      console.log(`[Bridge] Participant connected: ${participant.identity}`);
+      await this.injectUserContext(participant.identity);
+    });
+
+    // Also check existing participants (if we joined late)
+    this.room.remoteParticipants.forEach(async (p) => {
+      console.log(`[Bridge] Existing participant: ${p.identity}`);
+      await this.injectUserContext(p.identity);
+    });
+  }
+
+  private async injectUserContext(userId: string) {
+    // 忽略 agent 自己的 identity
+    if (userId.startsWith("agent-")) return;
+
+    console.log(`[Bridge] Loading context for user: ${userId}`);
+    const profile = await loadUserContext(userId);
+    if (profile) {
+      console.log(
+        `[Bridge] User profile loaded for ${profile.nickname || userId}`,
+      );
+      const newPrompt = buildSystemPrompt(profile, this.agent["systemPrompt"]); // Accessing private property temporarily or use getter
+      // 由于 systemPrompt 是 private，我们应该确保 InterviewAgent 有 getter，
+      // 或者我们在 buildSystemPrompt 时只传入 Base Prompt 字符串（我们可以定义一个常量）
+
+      const BASE_PROMPT = `
+你是一个专业的 AI 面试官，名字叫 MM。
+你的风格是：
+1. 专业、客气但不过分热情。
+2. 会根据候选人的回答进行追问。
+3. 如果听不清，会礼貌请求重复。
+4. 每次回复尽量简洁（1-3句话），引导对话继续。
+`;
+      // Re-build full prompt
+      const fullPrompt = buildSystemPrompt(profile, BASE_PROMPT);
+      this.agent.updateSystemPrompt(fullPrompt);
+    } else {
+      console.log(`[Bridge] No profile found for user: ${userId}`);
+    }
   }
 
   private async startAgentMic() {
