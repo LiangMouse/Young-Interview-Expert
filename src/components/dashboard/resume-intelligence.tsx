@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
-  Cloud,
   X,
   Plus,
   FileText,
@@ -47,6 +46,7 @@ export function ResumeIntelligence() {
 
   // 表单状态
   const [jobIntention, setJobIntention] = useState<string>("");
+  const [targetCompany, setTargetCompany] = useState<string>("");
   const [experienceYears, setExperienceYears] = useState<number | undefined>(
     undefined,
   );
@@ -71,6 +71,7 @@ export function ResumeIntelligence() {
   useEffect(() => {
     if (userInfo) {
       setJobIntention(userInfo.job_intention || "");
+      setTargetCompany(userInfo.company_intention || "");
       setExperienceYears(userInfo.experience_years ?? undefined);
       setTechStack(userInfo.skills || []);
       setWorkExperiences(userInfo.work_experiences || []);
@@ -288,6 +289,7 @@ export function ResumeIntelligence() {
     try {
       const result = await updateUserProfile({
         job_intention: jobIntention || undefined,
+        company_intention: targetCompany || undefined,
         experience_years: experienceYears,
         skills: techStack.join(", "),
         work_experiences:
@@ -358,9 +360,27 @@ export function ResumeIntelligence() {
         <>
           <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-emerald-600" />
           <h3 className="mb-2 text-lg font-medium text-[#141414]">解析完成</h3>
-          <div className="mb-4 flex items-center justify-center gap-2 text-sm text-[#666666]">
+          <div
+            className={`mb-4 flex items-center justify-center gap-2 text-sm text-[#666666] ${
+              userInfo?.resume_url
+                ? "cursor-pointer transition-colors hover:text-[#0F3E2E]"
+                : ""
+            }`}
+            onClick={(e) => {
+              if (userInfo?.resume_url) {
+                e.stopPropagation();
+                window.open(userInfo.resume_url, "_blank");
+              }
+            }}
+          >
             <FileText className="h-4 w-4" />
-            {uploadedFile.name}
+            <span
+              className={
+                userInfo?.resume_url ? "underline underline-offset-4" : ""
+              }
+            >
+              {uploadedFile.name}
+            </span>
           </div>
           <Button
             variant="outline"
@@ -379,7 +399,7 @@ export function ResumeIntelligence() {
 
     return (
       <>
-        <Cloud
+        <FileIcon
           className={`mx-auto mb-4 h-12 w-12 transition-colors ${
             isDragActive ? "text-emerald-700" : "text-emerald-600"
           }`}
@@ -448,15 +468,15 @@ export function ResumeIntelligence() {
           </Button>
         </div>
 
-        <div className="flex gap-4">
-          <div className="w-[60%] space-y-2">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="space-y-2">
             <Label htmlFor="target-role" className="text-[#141414]">
               {t("targetRole")}
             </Label>
             <Select value={jobIntention} onValueChange={setJobIntention}>
               <SelectTrigger
                 id="target-role"
-                className="border-[#E5E5E5] bg-white"
+                className="w-full border-[#E5E5E5] bg-white"
               >
                 <SelectValue placeholder={t("targetRole")} />
               </SelectTrigger>
@@ -472,7 +492,20 @@ export function ResumeIntelligence() {
             </Select>
           </div>
 
-          <div className="w-[40%] space-y-2">
+          <div className="space-y-2">
+            <Label htmlFor="target-company" className="text-[#141414]">
+              {t("targetCompany")}
+            </Label>
+            <Input
+              id="target-company"
+              placeholder={t("targetCompanyPlaceholder")}
+              value={targetCompany}
+              onChange={(e) => setTargetCompany(e.target.value)}
+              className="border-[#E5E5E5] bg-white"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="experience" className="text-[#141414]">
               {t("yearsOfExperience")}
             </Label>

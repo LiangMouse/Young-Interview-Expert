@@ -2,13 +2,8 @@
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  User,
-  History,
-  Settings,
-  Sparkles,
-} from "lucide-react";
+import { LayoutDashboard, User, History, Settings } from "lucide-react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 
 export function Sidebar() {
@@ -40,9 +35,17 @@ export function Sidebar() {
 
   return (
     <aside className="hidden w-64 flex-col border-r border-[#E5E5E5] bg-white lg:flex">
-      <div className="flex h-16 items-center gap-2 border-b border-[#E5E5E5] px-6">
-        <Sparkles className="h-5 w-5 text-[#141414]" />
-        <span className="text-lg font-medium text-[#141414]">{t("brand")}</span>
+      <div className="flex h-16 items-center gap-4 border-b border-[#E5E5E5] px-6">
+        <Image
+          src="/favicon.png"
+          alt="Logo"
+          width={30}
+          height={30}
+          className="h-5 w-5"
+        />
+        <span className="text-xl font-bold tracking-tight text-[#141414]">
+          {t("brand")}
+        </span>
       </div>
       <nav className="flex-1 space-y-0.5 p-4">
         {navItems.map((item) => {

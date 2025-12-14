@@ -25,6 +25,7 @@ export function QuickStartCard() {
 
   const [topic, setTopic] = useState<InterviewTopic | "">("");
   const [difficulty, setDifficulty] = useState<InterviewDifficulty | "">("");
+  const [duration, setDuration] = useState<number | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   // useTransition 追踪导航状态
   const [isPending, startTransition] = useTransition();
@@ -37,17 +38,24 @@ export function QuickStartCard() {
     // 验证表单
     if (!topic) {
       toast.error("请选择面试主题");
+      console.log("topic", topic);
       return;
     }
     if (!difficulty) {
       toast.error("请选择面试难度");
+      console.log("difficulty", difficulty);
+      return;
+    }
+    if (!duration) {
+      toast.error("请选择面试时长");
+      console.log("duration", duration);
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const result = await createInterview({ topic, difficulty });
+      const result = await createInterview({ topic, difficulty, duration });
 
       if (result.error) {
         toast.error(result.error);
@@ -68,7 +76,7 @@ export function QuickStartCard() {
       toast.error("启动面试失败，请重试");
       setIsLoading(false);
     }
-  }, [topic, difficulty, router]);
+  }, [topic, difficulty, duration, router]);
 
   return (
     <div className="rounded-lg border border-[#E5E5E5] bg-white p-10 shadow-sm lg:p-12">
@@ -79,7 +87,7 @@ export function QuickStartCard() {
           </h2>
           <p className="text-[#666666]">{t("description")}</p>
         </div>
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-3">
           <div className="space-y-2">
             <label className="text-xs uppercase tracking-wide text-[#666666]">
               {t("topic")}
@@ -127,6 +135,25 @@ export function QuickStartCard() {
                 <SelectItem value="expert">
                   {t("difficulties.expert")}
                 </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs uppercase tracking-wide text-[#666666]">
+              {t("duration")}
+            </label>
+            <Select
+              value={duration?.toString()}
+              onValueChange={(value) => setDuration(parseInt(value))}
+            >
+              <SelectTrigger className="border-[#E5E5E5] bg-white text-[#141414] h-12">
+                <SelectValue placeholder={t("selectDuration")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 min</SelectItem>
+                <SelectItem value="25">25 min</SelectItem>
+                <SelectItem value="40">40 min</SelectItem>
+                <SelectItem value="60">60 min</SelectItem>
               </SelectContent>
             </Select>
           </div>

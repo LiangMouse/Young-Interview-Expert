@@ -12,13 +12,19 @@ import { DeepgramSTTService } from "../services/deepgram-stt";
 import { DebouncedSTTService } from "../services/debounced-stt";
 import { OpenAILLMAdapter } from "../services/openai-llm";
 import { MiniMaxTTSAdapter } from "../services/minimax-tts";
-import { loadUserContext, buildSystemPrompt } from "../services/context-loader";
+import {
+  loadUserContext,
+  buildSystemPrompt,
+  loadInterviewContext,
+} from "../services/context-loader";
 
 export class LiveKitBridge {
   private room: Room;
   private agent!: InterviewAgent;
   private audioSource: AudioSource;
   private audioTrack?: LocalAudioTrack;
+  private currentProfile: any = null;
+  private currentInterview: any = null;
 
   constructor(room: Room) {
     this.room = room;
@@ -44,6 +50,8 @@ export class LiveKitBridge {
 
     const tts = new MiniMaxTTSAdapter({
       apiKey: apiKey,
+      // MiniMax TTS 需要配合 model 吗？ Adapter 构造函数只用了 apiKey?
+      // 上下文看到的是: apiKey: apiKey
     });
 
     const SYSTEM_PROMPT = `
@@ -106,14 +114,24 @@ export class LiveKitBridge {
       }
     });
 
-    // Handle Data messages (User Text Input)
-    this.room.on(RoomEvent.DataReceived, (payload, participant) => {
+    // Handle Data messages (User Text Input & RPC)
+    this.room.on(RoomEvent.DataReceived, async (payload, participant) => {
       const decoder = new TextDecoder();
       const msg = JSON.parse(decoder.decode(payload));
+
       if (msg.type === "user_text") {
-        // Manually trigger agent
-        // Note: Agent doesn't have public method for text input yet?
-        // We should expose one in InterviewAgent if we support text chat.
+        // Manually trigger agent (if needed)
+      }
+
+      // Handle RPC
+      if (msg.name === "start_interview" && msg.data?.interviewId) {
+        console.log(
+          `[Bridge] Received start_interview RPC: ${msg.data.interviewId}`,
+        );
+        await this.handleStartInterview(
+          msg.data.interviewId,
+          participant?.identity,
+        );
       }
     });
 
@@ -130,6 +148,26 @@ export class LiveKitBridge {
     });
   }
 
+  private async handleStartInterview(interviewId: string, userId?: string) {
+    // 1. Load Interview Context
+    const interview = await loadInterviewContext(interviewId);
+    if (interview) {
+      this.currentInterview = interview;
+      console.log(
+        `[Bridge] Loaded interview context: ${interview.type} (${interview.duration}min)`,
+      );
+    }
+
+    // 2. Ensure User Context is loaded
+    // If we have cached profile, use it. Otherwise try to load if userId provided.
+    if (!this.currentProfile && userId) {
+      await this.injectUserContext(userId);
+    }
+
+    // 3. Update Prompt with BOTH contexts
+    this.updateAgentPrompt();
+  }
+
   private async injectUserContext(userId: string) {
     // 忽略 agent 自己的 identity
     if (userId.startsWith("agent-")) return;
@@ -137,14 +175,18 @@ export class LiveKitBridge {
     console.log(`[Bridge] Loading context for user: ${userId}`);
     const profile = await loadUserContext(userId);
     if (profile) {
+      this.currentProfile = profile;
       console.log(
         `[Bridge] User profile loaded for ${profile.nickname || userId}`,
       );
-      const newPrompt = buildSystemPrompt(profile, this.agent["systemPrompt"]); // Accessing private property temporarily or use getter
-      // 由于 systemPrompt 是 private，我们应该确保 InterviewAgent 有 getter，
-      // 或者我们在 buildSystemPrompt 时只传入 Base Prompt 字符串（我们可以定义一个常量）
+      this.updateAgentPrompt();
+    } else {
+      console.log(`[Bridge] No profile found for user: ${userId}`);
+    }
+  }
 
-      const BASE_PROMPT = `
+  private updateAgentPrompt() {
+    const BASE_PROMPT = `
 你是一个专业的 AI 面试官，名字叫 MM。
 你的风格是：
 1. 专业、客气但不过分热情。
@@ -152,12 +194,13 @@ export class LiveKitBridge {
 3. 如果听不清，会礼貌请求重复。
 4. 每次回复尽量简洁（1-3句话），引导对话继续。
 `;
-      // Re-build full prompt
-      const fullPrompt = buildSystemPrompt(profile, BASE_PROMPT);
-      this.agent.updateSystemPrompt(fullPrompt);
-    } else {
-      console.log(`[Bridge] No profile found for user: ${userId}`);
-    }
+    // Re-build full prompt with whatever context we have
+    const fullPrompt = buildSystemPrompt(
+      this.currentProfile,
+      BASE_PROMPT,
+      this.currentInterview,
+    );
+    this.agent.updateSystemPrompt(fullPrompt);
   }
 
   private async startAgentMic() {

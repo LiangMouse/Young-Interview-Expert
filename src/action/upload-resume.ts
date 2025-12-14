@@ -358,34 +358,32 @@ export async function uploadResume(formData: FormData) {
       hasWorkExperiences: !!analyzeResult.data.workExperiences,
       workExperiencesCount: analyzeResult.data.workExperiences?.length || 0,
     });
-
+    const analyzeData = analyzeResult.data;
     const profileUpdateData: ProfileUpdateData = {
-      nickname: analyzeResult.data.personalInfo?.name,
-      email: analyzeResult.data.personalInfo?.email,
-      job_intention: analyzeResult.data.jobIntention,
-      experience_years: analyzeResult.data.experienceYears,
-      skills: analyzeResult.data.skills,
-      school: analyzeResult.data.education?.school,
-      major: analyzeResult.data.education?.major,
-      degree: analyzeResult.data.education?.degree,
-      graduation_date: analyzeResult.data.education?.graduationDate,
-      work_experiences: analyzeResult.data.workExperiences?.map((exp) => ({
+      nickname: analyzeData.personalInfo?.name,
+      email: analyzeData.personalInfo?.email,
+      job_intention: analyzeData.jobIntention,
+      experience_years: analyzeData.experienceYears,
+      skills: analyzeData.skills,
+      school: analyzeData.education?.school,
+      major: analyzeData.education?.major,
+      degree: analyzeData.education?.degree,
+      graduation_date: analyzeData.education?.graduationDate,
+      work_experiences: analyzeData.workExperiences?.map((exp) => ({
         company: exp.company,
         position: exp.position,
         start_date: exp.startDate || "", // 提供默认值
         end_date: exp.endDate || "", // 提供默认值
         description: exp.description,
       })),
-      project_experiences: analyzeResult.data.projectExperiences?.map(
-        (proj) => ({
-          project_name: proj.projectName,
-          role: proj.role || "", // 提供默认值
-          start_date: proj.startDate,
-          end_date: proj.endDate,
-          tech_stack: proj.techStack,
-          description: proj.description,
-        }),
-      ),
+      project_experiences: analyzeData.projectExperiences?.map((proj) => ({
+        project_name: proj.projectName,
+        role: proj.role || "", // 提供默认值
+        start_date: proj.startDate,
+        end_date: proj.endDate,
+        tech_stack: proj.techStack,
+        description: proj.description,
+      })),
       resume_url: publicUrl,
       updated_at: new Date().toISOString(),
     };

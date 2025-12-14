@@ -137,7 +137,7 @@
     "viewProfile": "查看资料",
     "resumeIntelligence": "简历智能",
     "sidebar": {
-      "brand": "Interview Lab",
+      "brand": "小面",
       "dashboard": "控制台",
       "profile": "个人资料",
       "history": "历史记录",
@@ -162,7 +162,9 @@
         "intermediate": "中级",
         "advanced": "高级",
         "expert": "专家"
-      }
+      },
+      "duration": "面试时长",
+      "selectDuration": "选择时长"
     },
     "stats": {
       "totalInterviews": "总面试次数",
@@ -194,6 +196,8 @@
       "chooseFile": "选择文件",
       "professionalDetails": "专业信息",
       "targetRole": "目标岗位",
+      "targetCompany": "目标公司",
+      "targetCompanyPlaceholder": "例如：Google, ByteDance",
       "yearsOfExperience": "工作年限",
       "techStack": "技术栈与技能",
       "typeSkillHint": "输入技能后按回车添加",

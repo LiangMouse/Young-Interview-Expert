@@ -36,8 +36,16 @@ export class InterviewAgent extends EventEmitter {
     this.setupSTT();
   }
 
-  public start() {
-    this.setState("LISTENING");
+  public async start() {
+    console.log("[Agent] Starting interview session...");
+    // 主动开场：通过 System Instruction 引导 LLM 打招呼
+    const startInstruction =
+      "现在面试正式开始。请热情且专业地向候选人打招呼，确认已进入面试，并请候选人先做一个简短的自我介绍。";
+
+    this.history.push({ role: "system", content: startInstruction });
+
+    this.setState("PROCESSING");
+    await this.generateAndSpeakResponse();
   }
 
   public updateSystemPrompt(newPrompt: string) {
@@ -79,7 +87,10 @@ export class InterviewAgent extends EventEmitter {
   private async processTurn(userText: string) {
     this.setState("PROCESSING");
     this.history.push({ role: "user", content: userText });
+    await this.generateAndSpeakResponse();
+  }
 
+  private async generateAndSpeakResponse() {
     try {
       // 1. LLM 生成
       const llmStream = this.llm.generateResponse(
@@ -90,15 +101,6 @@ export class InterviewAgent extends EventEmitter {
       // 我们需要一个流来暂存完整的 AI 回复，用于存入历史
       let fullAiResponse = "";
 
-      // 创建一个 PassThrough 流或者简单的 AsyncGenerator 分发
-      // 这里为了简单，我们采用这种模式：
-      // LLM 产生 text chunk -> 1. 发给 UI  2. 喂给 TTS buffer
-      // 但 LLM 和 TTS 速率不匹配。我们需要一个中间 buffer 或者 pipe。
-
-      // 最简单的 Pipeline 实现：
-      // 启动 TTS 生成任务，它消费 llmStream
-      // 同时我们在消费过程中记录文本
-
       // 重新封装 llmStream 以便同时用于 history recording
       const textIterator = llmStream[Symbol.asyncIterator]();
 
@@ -108,14 +110,12 @@ export class InterviewAgent extends EventEmitter {
           const chunk = result.value;
           fullAiResponse += chunk;
           // Emit UI update
-          // 注意：这里 `this` 绑定问题，改用箭头函数或闭包
           yield chunk;
           result = await textIterator.next();
         }
       };
 
       // 启动 TTS 转换
-      // 注意：我们需要在 ttsInputGenerator 里 emit 文本事件，这样 UI 才能看到字打出来
       const wrappedGenerator = (async function* (agent: InterviewAgent) {
         const inner = ttsInputGenerator();
         for await (const chunk of inner) {

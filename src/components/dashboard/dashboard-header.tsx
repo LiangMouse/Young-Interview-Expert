@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "@/i18n/navigation";
 import React from "react";
 import { useTranslations } from "next-intl";
+import { useUserStore } from "@/store/user";
 
 interface BreadcrumbItem {
   labelKey: string;
@@ -21,6 +22,7 @@ export function DashboardHeader({
   breadcrumbs,
   children,
 }: DashboardHeaderProps) {
+  const { userInfo } = useUserStore();
   const tDashboard = useTranslations("dashboard");
   const tProfile = useTranslations("profile");
 
@@ -74,10 +76,10 @@ export function DashboardHeader({
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#141414]" />
         </button>
         <Avatar className="h-9 w-9 ring-1 ring-[#E5E5E5]">
-          <AvatarImage src="/placeholder.svg?height=36&width=36" />
-          <AvatarFallback className="bg-[#F5F5F5] text-xs text-[#141414]">
-            DV
-          </AvatarFallback>
+          <AvatarImage
+            src={userInfo?.avatar_url || "/placeholder.svg?height=36&width=36"}
+            alt={userInfo?.nickname || "User Avatar"}
+          />
         </Avatar>
       </div>
     </header>

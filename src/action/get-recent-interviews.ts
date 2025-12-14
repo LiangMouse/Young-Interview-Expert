@@ -38,14 +38,23 @@ export async function getRecentInterviews(): Promise<InterviewRecord[]> {
     }
 
     // 确保数据格式正确
-    const formattedData = (data || []).map((item) => ({
-      id: item.id,
-      date: item.date ? new Date(item.date).toLocaleDateString("zh-CN") : "",
-      type: item.type || "练习模式",
-      score: item.score || 0,
-      duration: item.duration || "0分钟",
-      status: item.status || "pending",
-    }));
+    const formattedData = (data || []).map((item) => {
+      let displayType = item.type || "练习模式";
+      if (item.type && item.type.includes(":")) {
+        const [topic, diff] = item.type.split(":");
+        // 简单的映射或直接显示
+        displayType = `${topic} (${diff})`;
+      }
+
+      return {
+        id: item.id,
+        date: item.date ? new Date(item.date).toLocaleDateString("zh-CN") : "",
+        type: displayType,
+        score: item.score || 0,
+        duration: item.duration ? `${item.duration}分钟` : "未知",
+        status: item.status || "pending",
+      };
+    });
 
     return formattedData;
   } catch (error) {

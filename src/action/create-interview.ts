@@ -19,6 +19,8 @@ export interface CreateInterviewParams {
   topic: InterviewTopic;
   /** 面试难度 */
   difficulty: InterviewDifficulty;
+  /** 面试时长（分钟） */
+  duration: number;
 }
 
 /**
@@ -27,7 +29,7 @@ export interface CreateInterviewParams {
  * @returns 面试 ID 或错误信息
  */
 export async function createInterview(params: CreateInterviewParams) {
-  const { topic, difficulty } = params;
+  const { topic, difficulty, duration } = params;
 
   const supabase = await createClient();
   const {
@@ -56,10 +58,11 @@ export async function createInterview(params: CreateInterviewParams) {
     .insert([
       {
         user_id: profile.id,
-        type: topic,
+        // 将难度拼接到 type 字段：topic:difficulty
+        type: `${topic}:${difficulty}`,
         status: "pending",
-        // 将难度存储在 duration 字段（临时方案，后续可新增 difficulty 字段）
-        duration: difficulty,
+        // duration 字段存储实际时长
+        duration: duration.toString(),
       },
     ])
     .select("id")
