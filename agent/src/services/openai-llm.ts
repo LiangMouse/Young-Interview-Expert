@@ -35,6 +35,12 @@ export class OpenAILLMAdapter implements ILLMService {
       chatCtx.addMessage({ role: msg.role, content: msg.content });
     }
 
+    // Debug: Print messages being sent
+    const debugMessages = [];
+    if (systemPrompt)
+      debugMessages.push({ role: "system", content: systemPrompt });
+    debugMessages.push(...history);
+    console.log("[OpenAILLMAdapter] Sending messages:", debugMessages);
     const stream = await this.llmInstance.chat({ chatCtx });
 
     for await (const chunk of stream) {

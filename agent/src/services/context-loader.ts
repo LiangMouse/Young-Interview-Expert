@@ -1,7 +1,8 @@
-import { supabaseAdmin as supabase } from "../../../src/lib/supabase/admin";
-
 export async function loadUserContext(userId: string) {
   try {
+    const { supabaseAdmin: supabase } = await import(
+      "../../../src/lib/supabase/admin"
+    );
     const { data: profile, error } = await supabase
       .from("user_profiles")
       .select("*")
@@ -24,6 +25,9 @@ export async function loadUserContext(userId: string) {
 
 export async function loadInterviewContext(interviewId: string) {
   try {
+    const { supabaseAdmin: supabase } = await import(
+      "../../../src/lib/supabase/admin"
+    );
     const { data: interview, error } = await supabase
       .from("interviews")
       .select("*")
@@ -55,61 +59,81 @@ export function buildSystemPrompt(
   if (interview) {
     // 解析 type 字段 (topic:difficulty)
     const [topic, difficulty] = (interview.type || "").split(":");
-    const duration = interview.duration || "未知";
+    const duration = interview.duration ?? "未知";
+    const resolvedTopic = topic || interview.type || "综合技术";
+    const resolvedDifficulty = difficulty || "默认";
+    const resolvedStatus = interview.status || "进行中";
 
     interviewPart = `
-### 面试配置信息
-- **面试主题**: ${topic || interview.type || "综合技术"}
-- **面试难度**: ${difficulty || "默认"}
-- **面试时长**: ${duration} 分钟
-- **当前状态**: ${interview.status || "进行中"}
+<interview_context readonly="true">
+topic: ${resolvedTopic}
+difficulty: ${resolvedDifficulty}
+duration_minutes: ${duration}
+status: ${resolvedStatus}
+</interview_context>
 `;
   }
 
+  const skills = Array.isArray(profile?.skills)
+    ? profile.skills.join(", ")
+    : profile?.skills;
+
+  const workExperiences =
+    Array.isArray(profile?.work_experiences) && profile.work_experiences.length
+      ? profile.work_experiences
+          .map((exp: any, idx: number) => {
+            const company = exp?.company || "未知公司";
+            const position = exp?.position || "未知岗位";
+            const start = exp?.start_date || "?";
+            const end = exp?.end_date || "?";
+            const desc = exp?.description || "";
+            return `work_${idx + 1}: company=${company}; position=${position}; period=${start}-${end}; description=${desc}`;
+          })
+          .join("\n")
+      : "work_0: none";
+
+  const projectExperiences =
+    Array.isArray(profile?.project_experiences) &&
+    profile.project_experiences.length
+      ? profile.project_experiences
+          .map((proj: any, idx: number) => {
+            const name = proj?.project_name || "未命名项目";
+            const role = proj?.role || "成员";
+            const tech =
+              Array.isArray(proj?.tech_stack) && proj.tech_stack.length
+                ? proj.tech_stack.join(", ")
+                : proj?.tech_stack || "未指定";
+            const desc = proj?.description || "";
+            return `project_${idx + 1}: name=${name}; role=${role}; tech_stack=${tech}; description=${desc}`;
+          })
+          .join("\n")
+      : "project_0: none";
+
   const contextPart = profile
     ? `
-### 候选人背景信息
-- **姓名**: ${profile.nickname || "未知"}
-- **求职意向**: ${profile.job_intention || "未指定"}
-- **工作年限**: ${profile.experience_years || 0} 年
-- **核心技能**: ${Array.isArray(profile.skills) ? profile.skills.join(", ") : profile.skills || "无"}
-
-### 工作经历
-${
-  profile.work_experiences
-    ? profile.work_experiences
-        .map(
-          (exp: any) =>
-            `- **${exp.company}** (${exp.position}, ${exp.start_date || "?"} - ${exp.end_date || "?"})\n  ${exp.description || ""}`,
-        )
-        .join("\n\n")
-    : "无"
-}
-
-### 项目经历
-${
-  profile.project_experiences
-    ? profile.project_experiences
-        .map(
-          (proj: any) =>
-            `- **${proj.project_name}** (${proj.role || "成员"})\n  ${proj.description || ""}\n  *技术栈*: ${proj.tech_stack ? proj.tech_stack.join(", ") : "未指定"}`,
-        )
-        .join("\n\n")
-    : "无"
-}
+<candidate_context readonly="true">
+name: ${profile.nickname || "未知"}
+job_intention: ${profile.job_intention || "未指定"}
+experience_years: ${profile.experience_years || 0}
+skills: ${skills || "无"}
+${workExperiences}
+${projectExperiences}
+</candidate_context>
 `
     : "";
 
-  const instructionPart = `
-### 面试策略指令
-1. **基于背景与配置提问**:
-   - 请结合候选人的经历以及本次面试的**主题 (${interviewPart ? (interview.type || "").split(":")[0] : "通用"})** 和 **难度 (${interviewPart ? (interview.type || "").split(":")[1] : "默认"})** 进行提问。
-   - 如果是高级难度，请深入考察底层原理和架构设计。
-   - 如果是初级难度，请侧重基础知识和应用。
-   - 请注意把控时间，总时长约为 **${interview?.duration || "30"} 分钟**。
+  const resolvedTopic = interview ? (interview.type || "").split(":")[0] : "";
+  const resolvedDifficulty = interview
+    ? (interview.type || "").split(":")[1]
+    : "";
 
-2. **考察核心技能**: 重点考察列出的核心技能，验证其掌握深度。
-3. **个性化互动**: 自适应候选人的回答。如果候选人提到具体的项目细节，请就该细节进行追问。
+  const instructionPart = `
+<runtime_directives readonly="true">
+Use interview_context and candidate_context to tailor questions.
+If information is missing or conflicting, ask for clarification before concluding.
+Keep time budget: ${interview?.duration || 30} minutes.
+Preferred topic: ${resolvedTopic || "通用"}; difficulty: ${resolvedDifficulty || "默认"}.
+</runtime_directives>
 `;
 
   return `${basePrompt}\n${interviewPart}\n${contextPart}\n${instructionPart}`;

@@ -51,6 +51,7 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.48.1",
     "@tailwindcss/typography": "^0.5.16",
+    "@tanstack/react-virtual": "^3.13.13",
     "@types/lodash": "^4.17.20",
     "@types/react-speech-recognition": "^3.9.6",
     "@vercel/analytics": "^1.5.0",

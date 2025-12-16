@@ -40,9 +40,9 @@ export class InterviewAgent extends EventEmitter {
     console.log("[Agent] Starting interview session...");
     // 主动开场：通过 System Instruction 引导 LLM 打招呼
     const startInstruction =
-      "现在面试正式开始。请热情且专业地向候选人打招呼，确认已进入面试，并请候选人先做一个简短的自我介绍。";
+      "【系统指令】现在面试正式开始。请热情且专业地向候选人打招呼，确认已进入面试，并请候选人先做一个简短的自我介绍。";
 
-    this.history.push({ role: "system", content: startInstruction });
+    this.history.push({ role: "user", content: startInstruction });
 
     this.setState("PROCESSING");
     await this.generateAndSpeakResponse();
