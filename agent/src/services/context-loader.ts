@@ -48,6 +48,14 @@ export async function loadInterviewContext(interviewId: string) {
   }
 }
 
+/**
+ * 构造用于 LLM 的 system prompt（在基础提示词上拼接候选人与面试上下文）。
+ *
+ * @param profile 候选人档案（来自 `user_profiles`），可为 `null/undefined`。
+ * @param basePrompt 基础 system prompt 文本。
+ * @param interview 面试记录（来自 `interviews`），可选。
+ * @returns 拼接了 interview/candidate/runtime 指令片段后的完整 system prompt 字符串。
+ */
 export function buildSystemPrompt(
   profile: any,
   basePrompt: string,

@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
     const token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
       identity: participantIdentity,
       name: participantName,
-      // Token 有效期：1 小时
-      ttl: 60 * 60,
+      // Token 有效期：2 小时
+      ttl: 60 * 60 * 2,
     });
 
     // 授予房间权限
