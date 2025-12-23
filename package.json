@@ -12,7 +12,8 @@
     "prepare": "husky install",
     "commit": "git-cz",
     "test": "vitest run",
-    "agent:dev": "dotenv -e .env.local -- tsx watch agent/main.ts dev"
+    "agent:dev": "pkill -f 'tsx.*agent/cli' 2>/dev/null || true && dotenv -e .env.local -- tsx watch agent/cli.ts dev",
+    "agent:kill": "pkill -f 'tsx.*agent/cli' 2>/dev/null || true"
   },
   "config": {
     "commitizen": {
@@ -88,6 +89,7 @@
     "react-router-dom": "^7.9.5",
     "react-simplemde-editor": "^5.2.0",
     "react-speech-recognition": "^4.0.1",
+    "react-type-animation": "^3.2.0",
     "react-use": "^17.6.0",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",

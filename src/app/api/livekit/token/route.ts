@@ -50,8 +50,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 生成房间名（基于 interviewId）
-    const roomName = `interview-${interviewId}`;
+    // 生成房间名（优先使用开发模式指定的固定房间名）
+    const isFixedRoomMode = process.env.FIXED_ROOM_MODE === "true";
+    const devRoomName = process.env.DEV_ROOM_NAME;
+    const roomName =
+      isFixedRoomMode && devRoomName ? devRoomName : `interview-${interviewId}`;
+
+    if (isFixedRoomMode && devRoomName) {
+      console.warn(
+        `[livekit/token] FIXED ROOM MODE ENABLED: Using room "${roomName}"`,
+      );
+    }
 
     // 生成用户标识（使用用户 ID + 邮箱前缀）
     const participantIdentity = user.id;

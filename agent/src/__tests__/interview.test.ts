@@ -54,9 +54,9 @@ describe("runtime/interview.createInterviewApplier", () => {
     expect(session.generateReply).toHaveBeenCalledTimes(1);
     const arg = session.generateReply.mock.calls[0][0];
     expect(arg.userInput).toBe("系统：面试开场");
-    expect(String(arg.instructions)).toContain("frontend:beginner");
-    expect(String(arg.instructions)).toContain("梁爽");
-    expect(String(arg.instructions)).toContain("请做个简单的自我介绍？");
+    expect(String(arg.instructions)).toContain(
+      "只输出这句固定开场白，不要添加或修改任何内容：您好梁爽,我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧",
+    );
   });
 
   it("queues concurrent apply calls and runs them sequentially", async () => {

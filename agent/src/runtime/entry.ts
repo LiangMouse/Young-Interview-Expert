@@ -4,8 +4,9 @@ import {
   runWithJobContextAsync,
   voice,
 } from "@livekit/agents";
-import { RoomEvent } from "@livekit/rtc-node";
+import { Room, RoomEvent, RemoteParticipant } from "@livekit/rtc-node";
 import * as silero from "@livekit/agents-plugin-silero";
+import { RoomServiceClient } from "livekit-server-sdk";
 import {
   loadInterviewContext,
   loadUserContext,
@@ -24,11 +25,72 @@ import {
   createMiniMaxTTS,
 } from "../config/providers";
 
+/**
+ * Kick all existing agents from a room before connecting.
+ * This prevents duplicate agents during hot-reloads.
+ */
+async function kickOldAgents(roomName: string): Promise<void> {
+  const apiKey = process.env.LIVEKIT_API_KEY;
+  const apiSecret = process.env.LIVEKIT_API_SECRET;
+  const wsUrl = process.env.LIVEKIT_WS_URL || process.env.LIVEKIT_URL;
+
+  if (!apiKey || !apiSecret || !wsUrl) {
+    console.warn("[kickOldAgents] Missing LiveKit credentials, skipping");
+    return;
+  }
+
+  // Convert ws:// to http:// for API calls
+  const httpUrl = wsUrl.replace(/^ws(s)?:\/\//, "http$1://");
+
+  try {
+    const roomService = new RoomServiceClient(httpUrl, apiKey, apiSecret);
+    const participants = await roomService.listParticipants(roomName);
+
+    const oldAgents = participants.filter((p) =>
+      p.identity.startsWith("agent-"),
+    );
+
+    if (oldAgents.length > 0) {
+      for (const agent of oldAgents) {
+        try {
+          await roomService.removeParticipant(roomName, agent.identity);
+        } catch (e) {
+          console.warn(`[kickOldAgents] Failed to kick ${agent.identity}:`, e);
+        }
+      }
+    }
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    // Room might not exist yet, which is fine
+    console.log(
+      `[kickOldAgents] Could not check room "${roomName}":`,
+      errorMessage,
+    );
+  }
+}
+
 export async function agentEntry(ctx: JobContext) {
+  // Get room name from job info (more reliable than ctx.room.name before connect)
+  const roomName = ctx.job?.room?.name || ctx.room.name;
+
+  // Kick old agents before connecting (hot-reload cleanup)
+  if (roomName) await kickOldAgents(roomName);
+
   await ctx.connect();
 
   const participant = await ctx.waitForParticipant();
+  const vad = ctx.proc.userData.vad as silero.VAD;
 
+  await runWithJobContextAsync(ctx, async () => {
+    await runAgentSession(ctx.room, participant, vad);
+  });
+}
+
+export async function runAgentSession(
+  room: Room,
+  participant: RemoteParticipant,
+  vad: silero.VAD,
+) {
   let userProfile: unknown = null;
   if (!participant.identity.startsWith("agent-")) {
     userProfile = await loadUserContext(participant.identity);
@@ -48,7 +110,7 @@ export async function agentEntry(ctx: JobContext) {
     stt: createDeepgramSTT(TECH_VOCABULARY),
     llm: createMiniMaxLLM(),
     tts: createMiniMaxTTS(),
-    vad: ctx.proc.userData.vad as silero.VAD,
+    vad: vad,
     voiceOptions: { allowInterruptions: true, minInterruptionDuration: 500 },
   });
 
@@ -64,7 +126,7 @@ export async function agentEntry(ctx: JobContext) {
 
   // Transcript -> web
   session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (ev) => {
-    publishDataToRoom(ctx.room, {
+    publishDataToRoom(room, {
       type: "transcript",
       role: "user",
       text: ev.transcript,
@@ -110,7 +172,7 @@ export async function agentEntry(ctx: JobContext) {
     return typeof interviewId === "string" && interviewId ? interviewId : null;
   };
 
-  ctx.room.on(RoomEvent.DataReceived, async (payload) => {
+  room.on(RoomEvent.DataReceived, async (payload) => {
     try {
       const msg = JSON.parse(new TextDecoder().decode(payload)) as Record<
         string,
@@ -144,10 +206,10 @@ export async function agentEntry(ctx: JobContext) {
     }
   });
 
-  await runWithJobContextAsync(ctx, async () => {
-    await session.start({ agent, room: ctx.room });
-  });
+  await session.start({ agent, room });
   sessionRunning = true;
+  // 给 SDK 一点点时间完成内部 Activity 绑定
+  await new Promise((resolve) => setTimeout(resolve, 100));
 
   while (pendingUserTexts.length) {
     const t = pendingUserTexts.shift();
@@ -170,12 +232,12 @@ export async function agentEntry(ctx: JobContext) {
       scheduleApplyLatestInterview();
     } else {
       const candidateName = getCandidateName(userProfile);
-      const nameHint = candidateName
-        ? `请直接称呼候选人“${candidateName}”。`
-        : "";
+      const greeting = candidateName
+        ? `您好${candidateName},我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧`
+        : "您好,我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧";
       await session.generateReply({
         userInput: "系统：面试开场",
-        instructions: `你现在以“专业AI面试官”的身份做开场白。${nameHint}寒暄后请直接进入面试。输出请控制在1-2句。结尾必须是问句，并以全角问号“？”结束。最后一句必须包含且仅包含这句核心邀请：请做个简单的自我介绍？`,
+        instructions: `只输出这句固定开场白，不要添加或修改任何内容：${greeting}`,
         allowInterruptions: true,
       });
     }

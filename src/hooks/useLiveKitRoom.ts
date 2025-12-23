@@ -17,6 +17,8 @@ import {
   DataPacket_Kind,
   TranscriptionSegment,
 } from "livekit-client";
+// 注意：dedupeSegments 暂时保留，但当前使用更简单的 findLastIndex 策略
+// import { dedupeSegments } from "@livekit/components-core";
 
 export interface LiveKitRoomState {
   /** 房间连接状态 */
@@ -45,6 +47,37 @@ export interface TranscriptItem {
   isFinal: boolean;
 }
 
+const USER_FINAL_MERGE_WINDOW_MS = 3000;
+
+function shouldMergeUserFinal(lastMsg: TranscriptItem | null, now: number) {
+  if (!lastMsg || lastMsg.role !== "user" || !lastMsg.isFinal) {
+    return false;
+  }
+  return now - lastMsg.timestamp <= USER_FINAL_MERGE_WINDOW_MS;
+}
+
+function mergeTranscriptText(existing: string, incoming: string): string {
+  const trimmedExisting = existing.trim();
+  const trimmedIncoming = incoming.trim();
+
+  if (!trimmedIncoming) {
+    return existing;
+  }
+  if (!trimmedExisting) {
+    return trimmedIncoming;
+  }
+  if (trimmedIncoming === trimmedExisting) {
+    return existing;
+  }
+  if (trimmedIncoming.startsWith(trimmedExisting)) {
+    return trimmedIncoming;
+  }
+  if (trimmedExisting.endsWith(trimmedIncoming)) {
+    return trimmedExisting;
+  }
+  return `${trimmedExisting} ${trimmedIncoming}`;
+}
+
 export interface UseLiveKitRoomOptions {
   /** 面试 ID */
   interviewId: string;
@@ -60,6 +93,9 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
   const { interviewId, onConnected, onDisconnected, onError } = options;
 
   const roomRef = useRef<Room | null>(null);
+  // Track the first connected agent to filter duplicates (hot-reload issue)
+  const primaryAgentRef = useRef<string | null>(null);
+
   const [state, setState] = useState<LiveKitRoomState>({
     connectionState: ConnectionState.Disconnected,
     isConnected: false,
@@ -280,10 +316,31 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
           publication: RemoteTrackPublication,
           participant: RemoteParticipant,
         ) => {
+          const isAgent = participant.identity.startsWith("agent");
+
           if (track.kind === Track.Kind.Audio) {
-            // 自动播放 Agent 的音频
-            const audioElement = track.attach();
-            document.body.appendChild(audioElement);
+            // For agent audio, only attach the first agent (to handle hot-reload duplicates)
+            if (isAgent) {
+              if (!primaryAgentRef.current) {
+                primaryAgentRef.current = participant.identity;
+                console.log(
+                  `[useLiveKitRoom] Primary agent set: ${participant.identity}`,
+                );
+                const audioElement = track.attach();
+                document.body.appendChild(audioElement);
+              } else if (primaryAgentRef.current === participant.identity) {
+                const audioElement = track.attach();
+                document.body.appendChild(audioElement);
+              } else {
+                console.warn(
+                  `[useLiveKitRoom] Skipping secondary agent audio: ${participant.identity} (primary: ${primaryAgentRef.current})`,
+                );
+              }
+            } else {
+              // Non-agent audio - always attach
+              const audioElement = track.attach();
+              document.body.appendChild(audioElement);
+            }
           }
         },
       );
@@ -351,50 +408,111 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
       room.on(
         RoomEvent.TranscriptionReceived,
         (segments: TranscriptionSegment[], participant?: Participant) => {
-          console.log("[useLiveKitRoom] Transcription received:", segments);
-
           // 判断是 Agent 还是用户的转录
           const isAgent = participant instanceof RemoteParticipant;
-          const role = isAgent ? "agent" : "user";
+          const isAgentParticipant =
+            isAgent && participant?.identity?.startsWith("agent");
+
+          // Filter out secondary agents (hot-reload duplicate prevention)
+          if (isAgentParticipant && primaryAgentRef.current) {
+            if (participant?.identity !== primaryAgentRef.current) {
+              console.warn(
+                `[useLiveKitRoom] Skipping transcription from secondary agent: ${participant?.identity} (primary: ${primaryAgentRef.current})`,
+              );
+              return;
+            }
+          }
+
+          const role: "user" | "agent" = isAgent ? "agent" : "user";
 
           segments.forEach((segment) => {
             setState((prev) => {
-              // 查找是否已有该 segment（用于更新临时转录）
-              const existingIndex = prev.transcript.findIndex(
-                (t) => t.id === segment.id,
-              );
+              const now = Date.now();
+              const lastIndex = prev.transcript.length - 1;
+              const lastMsg =
+                lastIndex >= 0 ? prev.transcript[lastIndex] : null;
 
-              if (existingIndex >= 0) {
-                // 更新已有的转录
-                const updated = [...prev.transcript];
-                updated[existingIndex] = {
-                  ...updated[existingIndex],
-                  text: segment.text,
-                  isFinal: segment.final,
-                };
-                return { ...prev, transcript: updated };
-              }
+              // 只有当最后一条消息是同角色的非 final 消息时才更新它
+              // 这确保了：1) 新消息总在末尾 2) 不会插入到历史消息中间
+              const canUpdateLast =
+                lastMsg && lastMsg.role === role && !lastMsg.isFinal;
+              const shouldMergeWithLastFinal =
+                role === "user" && shouldMergeUserFinal(lastMsg, now);
 
-              // 添加新的转录
-              return {
-                ...prev,
-                transcript: [
-                  ...prev.transcript,
-                  {
-                    id: segment.id,
-                    role,
+              if (!segment.final) {
+                // 这是 interim 消息
+                if (canUpdateLast) {
+                  // 更新最后一条消息的文本
+                  const updated = [...prev.transcript];
+                  updated[lastIndex] = {
+                    ...lastMsg,
                     text: segment.text,
-                    timestamp: Date.now(),
-                    isFinal: segment.final,
-                  },
-                ],
-              };
+                    timestamp: now,
+                  };
+                  return { ...prev, transcript: updated };
+                }
+
+                // 追加新的 interim 消息到末尾
+                return {
+                  ...prev,
+                  transcript: [
+                    ...prev.transcript,
+                    {
+                      id: segment.id,
+                      role,
+                      text: segment.text,
+                      timestamp: now,
+                      isFinal: false,
+                    },
+                  ],
+                };
+              } else {
+                // 这是 final 消息
+                if (canUpdateLast) {
+                  // 将最后一条 interim 消息标记为 final
+                  const updated = [...prev.transcript];
+                  updated[lastIndex] = {
+                    ...lastMsg,
+                    text: segment.text,
+                    isFinal: true,
+                    timestamp: now,
+                  };
+                  return { ...prev, transcript: updated };
+                }
+
+                if (shouldMergeWithLastFinal && lastMsg) {
+                  const updated = [...prev.transcript];
+                  updated[lastIndex] = {
+                    ...lastMsg,
+                    text: mergeTranscriptText(lastMsg.text, segment.text),
+                    timestamp: now,
+                  };
+                  return { ...prev, transcript: updated };
+                }
+
+                // 追加新的 final 消息到末尾
+                return {
+                  ...prev,
+                  transcript: [
+                    ...prev.transcript,
+                    {
+                      id: segment.id,
+                      role,
+                      text: segment.text,
+                      timestamp: now,
+                      isFinal: true,
+                    },
+                  ],
+                };
+              }
             });
           });
         },
       );
 
       // 接收数据消息（用于自定义消息，如 RPC 响应）
+      // 注意：转录消息已通过 TranscriptionReceived 事件处理
+      // 此处不再处理 type: "transcript" 以避免重复
       room.on(
         RoomEvent.DataReceived,
         (
@@ -406,38 +524,54 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
             const decoder = new TextDecoder();
             const message = JSON.parse(decoder.decode(payload));
 
-            // 处理自定义转写消息（兼容旧格式）
+            // 跳过 transcript 类型消息，因为 TranscriptionReceived 事件已经处理了
+            // Agent 端通过 UserInputTranscribed 事件发送的 transcript 消息会导致重复
             if (message.type === "transcript") {
-              setState((prev) => ({
-                ...prev,
-                transcript: [
-                  ...prev.transcript,
-                  {
-                    id: `${Date.now()}-${Math.random()}`,
-                    role: message.role || "agent",
-                    text: message.text,
-                    timestamp: Date.now(),
-                    isFinal: message.isFinal ?? true,
-                  },
-                ],
-              }));
+              console.log(
+                "[useLiveKitRoom] Skipping duplicate transcript message (handled by TranscriptionReceived)",
+              );
+              return;
             }
 
-            // 处理 Agent 说话消息
+            // 处理 Agent 说话消息（通常是 final）
             if (message.type === "agent_speech") {
-              setState((prev) => ({
-                ...prev,
-                transcript: [
-                  ...prev.transcript,
-                  {
-                    id: `agent-${Date.now()}`,
-                    role: "agent",
+              setState((prev) => {
+                // 检查是否与最后一条 agent 消息文本重复
+                const lastAgentMsg = [...prev.transcript]
+                  .reverse()
+                  .find((t) => t.role === "agent");
+                if (lastAgentMsg && lastAgentMsg.text === message.text) {
+                  return prev; // 跳过重复
+                }
+
+                // 如果有 agent 的非 final 消息，将其标记为 final
+                const lastNonFinalIndex = prev.transcript.findLastIndex(
+                  (t) => t.role === "agent" && !t.isFinal,
+                );
+                if (lastNonFinalIndex >= 0) {
+                  const updated = [...prev.transcript];
+                  updated[lastNonFinalIndex] = {
+                    ...updated[lastNonFinalIndex],
                     text: message.text,
-                    timestamp: Date.now(),
                     isFinal: true,
-                  },
-                ],
-              }));
+                  };
+                  return { ...prev, transcript: updated };
+                }
+
+                return {
+                  ...prev,
+                  transcript: [
+                    ...prev.transcript,
+                    {
+                      id: `agent-${Date.now()}`,
+                      role: "agent",
+                      text: message.text,
+                      timestamp: Date.now(),
+                      isFinal: true,
+                    },
+                  ],
+                };
+              });
             }
           } catch (e) {
             // 忽略非 JSON 消息

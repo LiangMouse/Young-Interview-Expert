@@ -1,11 +1,19 @@
 "use client";
 
+import { useRef, useEffect, useCallback } from "react";
 import { Bot, User, MessageSquare } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type TranscriptItem } from "@/hooks/useLiveKitRoom";
 
 // 为了向后兼容，导出别名
 export type { TranscriptItem as TranscriptItemData };
+
+/** 打字机光标组件 - 闪烁效果 */
+function TypingCursor() {
+  return (
+    <span className="inline-block w-[2px] h-[1em] bg-current ml-[2px] animate-pulse" />
+  );
+}
 
 interface TranscriptStreamProps {
   /** 转写内容列表 */
@@ -31,6 +39,28 @@ export function TranscriptStream({
 }: TranscriptStreamProps) {
   const t = useTranslations("interview");
 
+  // Refs for auto-scroll functionality
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Check if user is near the bottom of the scroll container
+  const isNearBottom = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return true;
+    const threshold = 100; // Consider "at bottom" if within 100px
+    return (
+      container.scrollHeight - container.scrollTop - container.clientHeight <
+      threshold
+    );
+  }, []);
+
+  // Auto-scroll to bottom when new messages arrive (only if user is already near bottom)
+  useEffect(() => {
+    if (transcript.length > 0 && isNearBottom()) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [transcript, isNearBottom]);
+
   // 空状态：未连接或无转写内容
   if (!isConnected && !isConnecting) {
     return (
@@ -53,7 +83,10 @@ export function TranscriptStream({
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-4">
+    <div
+      ref={scrollContainerRef}
+      className="h-full overflow-y-auto p-6 space-y-4"
+    >
       {transcript.map((message) => (
         <div
           key={message.id}
@@ -87,8 +120,8 @@ export function TranscriptStream({
             <div
               className={
                 message.role === "agent"
-                  ? "rounded-lg bg-white p-3 shadow-sm text-sm text-[#141414] leading-relaxed"
-                  : "text-sm text-[#666666] leading-relaxed"
+                  ? `rounded-lg bg-white p-3 shadow-sm text-sm text-[#141414] leading-relaxed ${!message.isFinal ? "border-l-2 border-[#10B981]" : ""}`
+                  : `text-sm text-[#666666] leading-relaxed ${!message.isFinal ? "border-l-2 border-[#10B981] pl-2" : ""}`
               }
             >
               {message.text.includes("```") ? (
@@ -109,14 +142,22 @@ export function TranscriptStream({
                     }
                     return <span key={i}>{part}</span>;
                   })}
+                  {/* 非 final 消息显示闪烁光标 */}
+                  {!message.isFinal && <TypingCursor />}
                 </div>
               ) : (
-                message.text
+                <>
+                  {message.text}
+                  {/* 非 final 消息显示闪烁光标 */}
+                  {!message.isFinal && <TypingCursor />}
+                </>
               )}
             </div>
           </div>
         </div>
       ))}
+      {/* Bottom anchor for auto-scroll */}
+      <div ref={bottomRef} />
     </div>
   );
 }

@@ -39,16 +39,13 @@ export function createInterviewApplier(args: {
       }
     }
 
-    const nameHint = candidateName
-      ? `请直接称呼候选人“${candidateName}”。`
-      : "";
-    const interviewHint = interviewType
-      ? `今天面试主题是“${interviewType}”。`
-      : "";
+    const greeting = candidateName
+      ? `您好${candidateName},我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧`
+      : "您好,我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧";
 
     await session.generateReply({
       userInput: "系统：面试开场",
-      instructions: `你现在以“专业面试官”的身份做开场白。${interviewHint}${nameHint}寒暄后请直接进入面试，不要让候选人再确认“面试方向/岗位”。输出请控制在1-2句。严禁给自己起名/昵称/头衔：不要说“我叫X/你可以叫我X/叫我X经理/叫我MM”等。严禁自称AI/机器人/模型/系统，也不要提及任何公司/组织/品牌（包括候选人提到的公司）。也不要把候选人的经历当成你自己的经历来讲。结尾必须是问句，并以全角问号“？”结束。最后一句必须包含且仅包含这句核心邀请：请做个简单的自我介绍？`,
+      instructions: `只输出这句固定开场白，不要添加或修改任何内容：${greeting}`,
       allowInterruptions: true,
     });
   };
