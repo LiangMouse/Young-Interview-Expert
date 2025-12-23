@@ -212,6 +212,9 @@ importers:
       react-speech-recognition:
         specifier: ^4.0.1
         version: 4.0.1(react@19.2.0)
+      react-type-animation:
+        specifier: ^3.2.0
+        version: 3.2.0(prop-types@15.8.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       react-use:
         specifier: ^17.6.0
         version: 17.6.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -6036,6 +6039,13 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  react-type-animation@3.2.0:
+    resolution: {integrity: sha512-WXTe0i3rRNKjmggPvT5ntye1QBt0ATGbijeW6V3cQe2W0jaMABXXlPPEdtofnS9tM7wSRHchEvI9SUw+0kUohw==}
+    peerDependencies:
+      prop-types: ^15.5.4
+      react: '>= 15.0.0'
+      react-dom: '>= 15.0.0'
 
   react-universal-interface@0.6.2:
     resolution: {integrity: sha512-dg8yXdcQmvgR13RIlZbTRQOoUrDciFVoSBZILwjE2LFISxZZ8loVJKAkuzswl5js8BHda79bIb2b84ehU8IjXw==}
@@ -12637,6 +12647,12 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.2.2
+
+  react-type-animation@3.2.0(prop-types@15.8.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+    dependencies:
+      prop-types: 15.8.1
+      react: 19.2.0
+      react-dom: 19.2.0(react@19.2.0)
 
   react-universal-interface@0.6.2(react@19.2.0)(tslib@2.8.1):
     dependencies:

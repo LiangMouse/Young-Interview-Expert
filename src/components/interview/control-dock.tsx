@@ -12,7 +12,7 @@ import {
   Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
@@ -44,7 +44,7 @@ export function ControlDock({
 }: ControlDockProps) {
   const t = useTranslations("interview");
   const constraintsRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [inputText, setInputText] = useState("");
 
   // 发送消息
@@ -57,7 +57,7 @@ export function ControlDock({
 
   // 键盘事件：回车发送
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLInputElement>) => {
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSendMessage();
@@ -127,15 +127,16 @@ export function ControlDock({
         {/* Text Input (shown when not in voice mode) */}
         {!isVoiceMode && (
           <div className="mx-2 flex items-center gap-1">
-            <Input
+            <Textarea
               ref={inputRef}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={t("typeResponse")}
               disabled={disabled}
+              rows={1}
               className={cn(
-                "h-10 w-64 border-[#E5E5E5] bg-white",
+                "min-h-[40px] max-h-32 w-64 resize-none border-[#E5E5E5] bg-white py-2 transition-all duration-200 focus-visible:ring-[#10B981]/20",
                 disabled && "cursor-not-allowed opacity-50",
               )}
             />
