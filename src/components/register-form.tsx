@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Link, useRouter } from "@/i18n/navigation";
 import { loginWithGoogle, loginWithGithub } from "@/lib/auth-client";
 import { createClient } from "@/lib/supabase/client";
+import { checkEmailExists } from "@/action/auth";
 import { getOrCreateUserProfile } from "@/action/user-profile";
 import { useUserStore } from "@/store/user";
 import { toast } from "sonner";
@@ -50,9 +51,10 @@ export function RegisterForm() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const normalizedEmail = email.trim().toLowerCase();
 
     // 确认所有字段填写
-    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (!normalizedEmail || !password.trim() || !confirmPassword.trim()) {
       setError(t("fillAllFields"));
       return;
     }
@@ -72,14 +74,27 @@ export function RegisterForm() {
     setLoading(true);
 
     try {
+      const { exists, checked } = await checkEmailExists(normalizedEmail);
+      if (checked && exists) {
+        setError(t("emailAlreadyRegistered"));
+        setLoading(false);
+        return;
+      }
+
       // 注册 Supabase 账户
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
+        email: normalizedEmail,
         password,
       });
 
       if (error) {
         setError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data?.user?.identities?.length === 0) {
+        setError(t("emailAlreadyRegistered"));
         setLoading(false);
         return;
       }
@@ -97,6 +112,9 @@ export function RegisterForm() {
         startTransition(() => {
           router.push("/auth/sign-in");
         });
+      } else {
+        setError(t("registerError"));
+        setLoading(false);
       }
     } catch (err) {
       setError(t("registerError"));

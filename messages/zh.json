@@ -112,6 +112,7 @@
     "registerSuccess": "注册成功，请前往邮箱验证账户",
     "loginError": "登录时发生错误，请稍后重试",
     "registerError": "注册时发生错误，请稍后重试",
+    "emailAlreadyRegistered": "该邮箱已注册，请直接登录",
     "oauthError": "第三方登录失败，请重试",
     "fillAllFields": "请填写全部字段",
     "passwordMismatch": "两次输入的密码不一致",

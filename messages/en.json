@@ -112,6 +112,7 @@
     "registerSuccess": "Registration successful, please verify your email",
     "loginError": "An error occurred during login, please try again",
     "registerError": "An error occurred during registration, please try again",
+    "emailAlreadyRegistered": "This email is already registered. Please sign in instead.",
     "oauthError": "Third-party login failed, please try again",
     "fillAllFields": "Please fill in all fields",
     "passwordMismatch": "Passwords do not match",
