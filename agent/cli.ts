@@ -1,6 +1,16 @@
+/**
+ * 1. 加载环境变量
+ * 2. 初始化 LiveKit Agents logger
+ * 3. 检查是否是 fixed room 直连模式
+ * 4. 设置 numIdleProcesses，杀死
+ * 5. 运行 agent worker
+ */
+
 import * as dotenv from "dotenv";
 import { initAgentsLogger } from "./src/bootstrap/logger";
 import { runWorkerMode } from "./src/modes/worker";
+// 导入 Turn Detector 插件，确保 download-files 命令能下载其模型
+import * as livekit from "@livekit/agents-plugin-livekit";
 
 // Load environment variables for CLI mode
 dotenv.config({ path: ".env.local" });
@@ -20,8 +30,12 @@ const shutdown = () => {
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+
+// 直连模式的命令强制转换
+// 如
 if (isFixedRoomMode && devRoomName) {
-  const args = process.argv.slice(2);
   // If the command is 'dev' or missing, we swap it for 'connect --room <name>'
   if (args.length === 0 || args[0] === "dev") {
     process.argv = [
@@ -31,19 +45,16 @@ if (isFixedRoomMode && devRoomName) {
       "--room",
       devRoomName,
     ];
-    console.warn(
-      `[FixedRoomMode] Overriding CLI command to 'connect --room ${devRoomName}'\n`,
-    );
-    console.warn(
-      `[FixedRoomMode] WARNING: Ensure only ONE agent process is running to avoid duplicates!\n`,
+    console.log(
+      `[FixedRoomMode] 🔄 Auto-switched to: connect --room ${devRoomName}`,
     );
   }
 }
 
 const agentModuleUrl = new URL("./main.ts", import.meta.url).toString();
 
-// Always use runWorkerMode which internally calls cli.runApp()
-// In fixed room mode, we set numIdleProcesses to 0 to avoid orphaned processes and conflicts
+// 始终使用 runWorkerMode，它在内部调用 cli.runApp()
+// 在固定房间模式下，我们将 numIdleProcesses 设置为 0，以避免孤儿进程和冲突
 runWorkerMode(agentModuleUrl, {
   numIdleProcesses: isFixedRoomMode ? 0 : 3,
 });

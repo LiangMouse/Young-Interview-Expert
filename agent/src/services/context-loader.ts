@@ -146,3 +146,28 @@ Preferred topic: ${resolvedTopic || "通用"}; difficulty: ${resolvedDifficulty 
 
   return `${basePrompt}\n${interviewPart}\n${contextPart}\n${instructionPart}`;
 }
+
+export async function loadInterviewMessages(interviewId: string) {
+  try {
+    const { supabaseAdmin: supabase } = await import(
+      "../../../src/lib/supabase/admin"
+    );
+    const { data: messages, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("interview_id", interviewId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.warn(
+        `[ContextLoader] Error loading messages for ${interviewId}:`,
+        error.message,
+      );
+      return [];
+    }
+    return messages || [];
+  } catch (e) {
+    console.error(`[ContextLoader] Unexpected error loading messages:`, e);
+    return [];
+  }
+}

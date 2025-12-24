@@ -87,9 +87,9 @@ export function TranscriptStream({
       ref={scrollContainerRef}
       className="h-full overflow-y-auto p-6 space-y-4"
     >
-      {transcript.map((message) => (
+      {transcript.map((message, index) => (
         <div
-          key={message.id}
+          key={`${message.id}-${index}`}
           className={
             message.role === "agent" ? "flex gap-3" : "flex gap-3 opacity-80"
           }

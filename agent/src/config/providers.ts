@@ -4,11 +4,11 @@ import { MiniMaxTTS } from "../plugins/minimax-tts-plugin";
 
 export const MINIMAX_BASE_URL = "https://api.minimax.chat/v1";
 export const DEFAULT_MINIMAX_MODEL = "abab5.5s-chat";
-export const DEFAULT_MINIMAX_TEMPERATURE = 0.7;
+export const DEFAULT_MINIMAX_TEMPERATURE = 0.4;
 
-// 默认使用 Deepgram 的高精度通用模型
-export const DEFAULT_DEEPGRAM_MODEL = "nova-2-general";
-export const DEFAULT_DEEPGRAM_LANGUAGE = "zh-CN";
+// 默认使用 Deepgram 的高精度通用模型（多语言）
+export const DEFAULT_DEEPGRAM_MODEL = "nova-3-general";
+export const DEFAULT_DEEPGRAM_LANGUAGE = "zh";
 export const DEFAULT_DEEPGRAM_SMART_FORMAT = true;
 export const DEEPGRAM_KEYTERM_LIMIT = 20;
 
@@ -43,26 +43,59 @@ export function getDeepgramModel(): string {
   return resolved || DEFAULT_DEEPGRAM_MODEL;
 }
 
-export function createDeepgramSTT(keyterm: string[]) {
+export function getDeepgramLanguage(): string {
+  const v = process.env.DEEPGRAM_LANGUAGE;
+  const resolved = typeof v === "string" ? v.trim() : "";
+  if (!resolved) return DEFAULT_DEEPGRAM_LANGUAGE;
+
+  const normalized = resolved.toLowerCase();
+  if (normalized === "en-us" || normalized === "en") return "en-US";
+  if (normalized === "zh-cn" || normalized === "zh_cn" || normalized === "zh")
+    return "zh";
+  return resolved;
+}
+
+function resolveDeepgramModel(language: string): string {
+  const model = getDeepgramModel();
+  const lang = language.toLowerCase();
+  const isEnglish = lang === "en-us" || lang === "en";
+
+  // nova-3 系列目前仅支持英文，非英文时提前回退，避免 400
+  if (!isEnglish && model.startsWith("nova-3")) {
+    return "nova-2-general";
+  }
+
+  return model;
+}
+
+export function createDeepgramSTT(keyterm: string[], language?: string) {
   const cleanedKeyterms = Array.isArray(keyterm)
     ? keyterm
         .filter((k) => typeof k === "string" && k.trim())
         .slice(0, DEEPGRAM_KEYTERM_LIMIT)
     : [];
-  const keywords: [string, number][] = cleanedKeyterms.map((keyword) => [
-    keyword,
-    1,
-  ]);
+  const resolvedLanguage = language || getDeepgramLanguage();
+  const resolvedModel = resolveDeepgramModel(resolvedLanguage);
+  const normalizedLanguage = resolvedLanguage.toLowerCase();
+  const isEnglish =
+    normalizedLanguage === "en" || normalizedLanguage === "en-us";
 
-  return new deepgram.STT({
+  // Deepgram 对非英文场景的 keyword boost 支持有限，且 SDK 会对 keywords 进行双重编码导致 400，
+  // 因此仅保留 keyterm 作为提示词，keywords 置空。
+  const keywords: [string, number][] = [];
+  const resolvedKeyterms = isEnglish ? cleanedKeyterms : [];
+
+  const sttInstance = new deepgram.STT({
     apiKey: getDeepgramApiKey(),
     // 使用 as any 绕过类型检查，最新模型在类型定义中可能缺失
-    model: getDeepgramModel() as any,
-    language: DEFAULT_DEEPGRAM_LANGUAGE,
+    model: resolvedModel as any,
+    language: resolvedLanguage,
     smartFormat: DEFAULT_DEEPGRAM_SMART_FORMAT,
     keywords,
-    keyterm: cleanedKeyterms,
+    keyterm: resolvedKeyterms,
   });
+
+  return sttInstance;
 }
 
 export function createMiniMaxLLM() {
@@ -74,9 +107,13 @@ export function createMiniMaxLLM() {
   });
 }
 
-export function createMiniMaxTTS() {
+export function createMiniMaxTTS(language?: string) {
+  // 根据语言选择音色，如果是英文用英文音色，中文用中文音色
+  const isEnglish = language?.toLowerCase().startsWith("en");
+  const voiceId = isEnglish ? "female-en-nina" : DEFAULT_MINIMAX_VOICE_ID;
+
   return new MiniMaxTTS({
     apiKey: getMiniMaxApiKey(),
-    voiceId: DEFAULT_MINIMAX_VOICE_ID,
+    voiceId: voiceId,
   });
 }

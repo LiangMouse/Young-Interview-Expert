@@ -37,6 +37,8 @@ describe("Messages API", () => {
     mockEq.mockReturnValue({
       order: mockOrder,
     });
+
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   describe("GET", () => {

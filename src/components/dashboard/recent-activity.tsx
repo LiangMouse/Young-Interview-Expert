@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { FileText } from "lucide-react";
+import Link from "next/link";
 import { getRecentInterviews } from "@/action/get-recent-interviews";
 import type { InterviewRecord } from "@/types/interview";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -112,26 +113,46 @@ export function RecentActivity() {
             {activities.map((activity) => (
               <tr
                 key={activity.id}
-                className="border-b border-[#E5E5E5] transition-colors hover:bg-[#FDFCF8]"
+                className="border-b border-[#E5E5E5] transition-colors hover:bg-[#FDFCF8] cursor-pointer"
               >
                 <td className="px-8 py-4 text-sm text-[#141414]">
-                  {activity.date}
+                  <Link
+                    href={`/interview/${activity.id}`}
+                    className="block w-full"
+                  >
+                    {activity.date}
+                  </Link>
                 </td>
                 <td className="px-8 py-4 text-sm text-[#141414]">
-                  {typeLabels[activity.type] || activity.type}
+                  <Link
+                    href={`/interview/${activity.id}`}
+                    className="block w-full"
+                  >
+                    {typeLabels[activity.type] || activity.type}
+                  </Link>
                 </td>
                 <td className="px-8 py-4 text-sm text-[#141414]">
-                  {activity.score}/100
+                  <Link
+                    href={`/interview/${activity.id}`}
+                    className="block w-full"
+                  >
+                    {activity.score}/100
+                  </Link>
                 </td>
                 <td className="px-8 py-4">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${activity.status === "completed" ? "bg-[#0F3E2E]" : "bg-[#666666]"}`}
-                    />
-                    <span className="text-sm capitalize text-[#666666]">
-                      {tTable(activity.status as "completed" | "pending")}
-                    </span>
-                  </div>
+                  <Link
+                    href={`/interview/${activity.id}`}
+                    className="block w-full"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${activity.status === "completed" ? "bg-[#0F3E2E]" : "bg-[#666666]"}`}
+                      />
+                      <span className="text-sm capitalize text-[#666666]">
+                        {tTable(activity.status as "completed" | "pending")}
+                      </span>
+                    </div>
+                  </Link>
                 </td>
               </tr>
             ))}

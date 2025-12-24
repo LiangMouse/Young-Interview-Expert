@@ -1,11 +1,13 @@
 import {
   type JobContext,
+  llm,
   metrics,
   runWithJobContextAsync,
   voice,
 } from "@livekit/agents";
 import { Room, RoomEvent, RemoteParticipant } from "@livekit/rtc-node";
 import * as silero from "@livekit/agents-plugin-silero";
+import * as livekit from "@livekit/agents-plugin-livekit";
 import { RoomServiceClient } from "livekit-server-sdk";
 import {
   loadInterviewContext,
@@ -19,11 +21,16 @@ import { publishDataToRoom } from "./livekit";
 import { getCandidateName } from "./profile";
 import { createInterviewApplier } from "./interview";
 import { createUserTextResponder } from "./responders";
+import { TurnCoordinator } from "./turn-coordinator";
 import {
   createDeepgramSTT,
   createMiniMaxLLM,
   createMiniMaxTTS,
 } from "../config/providers";
+import {
+  saveUserMessage,
+  saveAiMessage,
+} from "../services/message-persistence";
 
 /**
  * Kick all existing agents from a room before connecting.
@@ -101,17 +108,56 @@ export async function runAgentSession(
     BASE_SYSTEM_PROMPT,
     null,
   );
-  const agent = new voice.Agent({
+  // 从参与者元数据中获取语言设置 (locale)
+  let locale = "zh";
+  try {
+    if (participant.metadata) {
+      const metadata = JSON.parse(participant.metadata);
+      if (metadata.locale) {
+        locale = metadata.locale;
+        console.log(`[Agent Session] Detected user locale: ${locale}`);
+      }
+    }
+  } catch (e) {
+    console.warn("[Agent Session] Failed to parse participant metadata", e);
+  }
+
+  // 定义Agent如何处理音频输入和输出
+  const session = new voice.AgentSession({
+    stt: createDeepgramSTT(TECH_VOCABULARY, locale),
+    llm: createMiniMaxLLM(),
+    tts: createMiniMaxTTS(locale),
+    vad: vad,
+    // 使用 Turn Detector 多语言模型，基于语义理解判断用户是否说完
+    // 可以理解"让我想想..."这类语句，不会在用户思考时打断
+    turnDetection: new livekit.turnDetector.MultilingualModel(),
+    voiceOptions: {
+      allowInterruptions: false,
+      minInterruptionDuration: 500,
+      minInterruptionWords: 0,
+      minEndpointingDelay: 1000,
+      // 面试场景：允许候选人最长 25 秒的思考时间
+      maxEndpointingDelay: 25000,
+    },
+  });
+  const turnCoordinator = new TurnCoordinator(session);
+
+  class InterviewAgent extends voice.Agent {
+    async onUserTurnCompleted(
+      _chatCtx: llm.ChatContext,
+      newMessage: llm.ChatMessage,
+    ) {
+      const text = newMessage?.textContent?.trim();
+      if (text) {
+        turnCoordinator.handleUserTurnEnd(text);
+      }
+      throw new voice.StopResponse();
+    }
+  }
+
+  const agent = new InterviewAgent({
     instructions: currentPrompt,
     tools: {},
-  });
-
-  const session = new voice.AgentSession({
-    stt: createDeepgramSTT(TECH_VOCABULARY),
-    llm: createMiniMaxLLM(),
-    tts: createMiniMaxTTS(),
-    vad: vad,
-    voiceOptions: { allowInterruptions: true, minInterruptionDuration: 500 },
   });
 
   // Metrics / errors
@@ -124,15 +170,54 @@ export async function runAgentSession(
     console.error("[Agent Error]", ev.error);
   });
 
-  // Transcript -> web
   session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (ev) => {
-    publishDataToRoom(room, {
-      type: "transcript",
-      role: "user",
-      text: ev.transcript,
-      isFinal: true,
-      timestamp: Date.now(),
-    });
+    if (ev.transcript?.trim()) {
+      turnCoordinator.markVoiceActivity();
+    }
+  });
+
+  // 使用 ConversationItemAdded 事件处理用户和 Agent 的消息
+  // 结合 TurnCoordinator 进行用户轮次合并，避免短暂停顿导致多次回复
+  session.on(voice.AgentSessionEventTypes.ConversationItemAdded, (ev) => {
+    const item = ev.item;
+    if (item.type !== "message") return;
+    const text = item.textContent?.trim();
+    if (!text) return;
+
+    if (item.role === "user") {
+      // 过滤掉以"系统："开头的内部指令，不发送到前端
+      if (text.startsWith("系统：") || text.startsWith("系统:")) {
+        return;
+      }
+      if (!turnCoordinator.shouldPublishUserMessage(item)) {
+        return;
+      }
+      // 用户轮次结束，发送完整的用户消息
+      publishDataToRoom(room, {
+        type: "transcript",
+        role: "user",
+        text,
+        isFinal: true,
+        timestamp: Date.now(),
+      });
+
+      // 保存用户消息到数据库
+      if (latestInterview && typeof latestInterview.id === "string") {
+        saveUserMessage(latestInterview.id, text);
+      }
+    } else if (item.role === "assistant") {
+      // Agent 回复
+      publishDataToRoom(room, {
+        type: "agent_speech",
+        text,
+        timestamp: Date.now(),
+      });
+
+      // 保存 Agent 消息到数据库
+      if (latestInterview && typeof latestInterview.id === "string") {
+        saveAiMessage(latestInterview.id, text);
+      }
+    }
   });
 
   // state for rpc/order
@@ -195,6 +280,7 @@ export async function runAgentSession(
       }
 
       if (msg.type === "user_text" && typeof msg.text === "string") {
+        turnCoordinator.markManualTextInput();
         if (!sessionRunning) {
           pendingUserTexts.push(msg.text);
           return;

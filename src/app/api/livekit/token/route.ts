@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // 解析请求体
     const body = await request.json();
-    const { interviewId } = body;
+    const { interviewId, locale } = body;
 
     if (!interviewId) {
       return NextResponse.json(
@@ -71,6 +71,8 @@ export async function POST(request: NextRequest) {
     const token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
       identity: participantIdentity,
       name: participantName,
+      // 将语言信息存入 metadata，供 Agent 读取
+      metadata: JSON.stringify({ locale: locale || "zh" }),
       // Token 有效期：2 小时
       ttl: 60 * 60 * 2,
     });

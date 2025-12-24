@@ -22,7 +22,18 @@ vi.mock("@livekit/agents", () => {
       return {};
     }
   }
-  return { voice: { Agent } };
+
+  class ChatContext {
+    public messages: any[] = [];
+    addMessage(msg: any) {
+      this.messages.push(msg);
+    }
+  }
+
+  return {
+    voice: { Agent },
+    llm: { ChatContext },
+  };
 });
 
 import { createInterviewApplier } from "../runtime/interview";
@@ -48,11 +59,11 @@ describe("runtime/interview.createInterviewApplier", () => {
     await apply({ type: "frontend:beginner", duration: 10 });
 
     expect(session.updateAgent).toHaveBeenCalledTimes(1);
-    const agentInstance = session.updateAgent.mock.calls[0][0];
+    const agentInstance = (session.updateAgent.mock.calls[0] as any)[0];
     expect(agentInstance._instructions).toBe("PROMPT_FROM_BUILD");
 
     expect(session.generateReply).toHaveBeenCalledTimes(1);
-    const arg = session.generateReply.mock.calls[0][0];
+    const arg = (session.generateReply.mock.calls[0] as any)[0];
     expect(arg.userInput).toBe("系统：面试开场");
     expect(String(arg.instructions)).toContain(
       "只输出这句固定开场白，不要添加或修改任何内容：您好梁爽,我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧",

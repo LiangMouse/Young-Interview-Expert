@@ -1,10 +1,10 @@
 /**
  * useLiveKitRoom Hook
- *
  * 封装 LiveKit 房间连接逻辑，供面试页面使用
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useLocale } from "next-intl";
 import {
   Room,
   RoomEvent,
@@ -19,6 +19,7 @@ import {
 } from "livekit-client";
 // 注意：dedupeSegments 暂时保留，但当前使用更简单的 findLastIndex 策略
 // import { dedupeSegments } from "@livekit/components-core";
+import { getInterviewMessages, type ChatMessage } from "@/action/interview";
 
 export interface LiveKitRoomState {
   /** 房间连接状态 */
@@ -45,37 +46,6 @@ export interface TranscriptItem {
   text: string;
   timestamp: number;
   isFinal: boolean;
-}
-
-const USER_FINAL_MERGE_WINDOW_MS = 3000;
-
-function shouldMergeUserFinal(lastMsg: TranscriptItem | null, now: number) {
-  if (!lastMsg || lastMsg.role !== "user" || !lastMsg.isFinal) {
-    return false;
-  }
-  return now - lastMsg.timestamp <= USER_FINAL_MERGE_WINDOW_MS;
-}
-
-function mergeTranscriptText(existing: string, incoming: string): string {
-  const trimmedExisting = existing.trim();
-  const trimmedIncoming = incoming.trim();
-
-  if (!trimmedIncoming) {
-    return existing;
-  }
-  if (!trimmedExisting) {
-    return trimmedIncoming;
-  }
-  if (trimmedIncoming === trimmedExisting) {
-    return existing;
-  }
-  if (trimmedIncoming.startsWith(trimmedExisting)) {
-    return trimmedIncoming;
-  }
-  if (trimmedExisting.endsWith(trimmedIncoming)) {
-    return trimmedExisting;
-  }
-  return `${trimmedExisting} ${trimmedIncoming}`;
 }
 
 export interface UseLiveKitRoomOptions {
@@ -107,6 +77,70 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
     error: null,
   });
 
+  // 加载历史消息
+  useEffect(() => {
+    if (!interviewId) return;
+
+    let mounted = true;
+
+    const loadHistory = async () => {
+      try {
+        const { success, messages, error } =
+          await getInterviewMessages(interviewId);
+
+        if (success && messages && mounted) {
+          const history: TranscriptItem[] = [];
+
+          // 处理用户消息
+          if (Array.isArray(messages.user_messages)) {
+            messages.user_messages.forEach((msg: any) => {
+              history.push({
+                id: msg.id || `hist-user-${Date.now()}-${Math.random()}`,
+                role: "user",
+                text: msg.content,
+                timestamp: new Date(msg.timestamp).getTime(),
+                isFinal: true,
+              });
+            });
+          }
+
+          // 处理 AI 消息
+          if (Array.isArray(messages.ai_messages)) {
+            messages.ai_messages.forEach((msg: any) => {
+              history.push({
+                id: msg.id || `hist-ai-${Date.now()}-${Math.random()}`,
+                role: "agent",
+                text: msg.content,
+                timestamp: new Date(msg.timestamp).getTime(),
+                isFinal: true,
+              });
+            });
+          }
+
+          // 按时间排序
+          history.sort((a, b) => a.timestamp - b.timestamp);
+
+          setState((prev) => ({
+            ...prev,
+            transcript: history,
+          }));
+        } else if (error) {
+          console.error("[useLiveKitRoom] Failed to load history:", error);
+        }
+      } catch (e) {
+        console.error("[useLiveKitRoom] Error loading history:", e);
+      }
+    };
+
+    loadHistory();
+
+    return () => {
+      mounted = false;
+    };
+  }, [interviewId]);
+
+  const locale = useLocale();
+
   /**
    * 获取 LiveKit token
    */
@@ -114,7 +148,7 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
     const response = await fetch("/api/livekit/token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ interviewId }),
+      body: JSON.stringify({ interviewId, locale }),
     });
 
     if (!response.ok) {
@@ -154,6 +188,16 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
 
       // 连接到房间
       await room.connect(url, token);
+
+      const startAudio = (room as Room & { startAudio?: () => Promise<void> })
+        .startAudio;
+      if (startAudio) {
+        try {
+          await startAudio.call(room);
+        } catch (error) {
+          console.warn("[useLiveKitRoom] Failed to start audio:", error);
+        }
+      }
 
       // 启用麦克风
       await room.localParticipant.setMicrophoneEnabled(true);
@@ -270,6 +314,7 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
 
   /**
    * 设置房间事件监听器
+   * 用于处理房间连接状态变化、参与者连接和断开等事件
    */
   const setupRoomEventListeners = useCallback(
     (room: Room) => {
@@ -305,8 +350,26 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
             "[useLiveKitRoom] Participant disconnected:",
             participant.identity,
           );
+          if (participant.identity === primaryAgentRef.current) {
+            primaryAgentRef.current = null;
+          }
         },
       );
+
+      const attachAndPlayAudio = (audioTrack: Track) => {
+        const audioElement = audioTrack.attach() as HTMLMediaElement;
+        audioElement.autoplay = true;
+
+        audioElement.muted = false;
+        audioElement.style.display = "none";
+        document.body.appendChild(audioElement);
+        const playPromise = audioElement.play?.();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch((error) => {
+            console.warn("[useLiveKitRoom] Audio play blocked:", error);
+          });
+        }
+      };
 
       // 音轨订阅
       room.on(
@@ -317,6 +380,12 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
           participant: RemoteParticipant,
         ) => {
           const isAgent = participant.identity.startsWith("agent");
+          if (
+            primaryAgentRef.current &&
+            !room.remoteParticipants.has(primaryAgentRef.current)
+          ) {
+            primaryAgentRef.current = null;
+          }
 
           if (track.kind === Track.Kind.Audio) {
             // For agent audio, only attach the first agent (to handle hot-reload duplicates)
@@ -326,11 +395,9 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
                 console.log(
                   `[useLiveKitRoom] Primary agent set: ${participant.identity}`,
                 );
-                const audioElement = track.attach();
-                document.body.appendChild(audioElement);
+                attachAndPlayAudio(track);
               } else if (primaryAgentRef.current === participant.identity) {
-                const audioElement = track.attach();
-                document.body.appendChild(audioElement);
+                attachAndPlayAudio(track);
               } else {
                 console.warn(
                   `[useLiveKitRoom] Skipping secondary agent audio: ${participant.identity} (primary: ${primaryAgentRef.current})`,
@@ -338,8 +405,7 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
               }
             } else {
               // Non-agent audio - always attach
-              const audioElement = track.attach();
-              document.body.appendChild(audioElement);
+              attachAndPlayAudio(track);
             }
           }
         },
@@ -347,7 +413,10 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
 
       // 音轨取消订阅
       room.on(RoomEvent.TrackUnsubscribed, (track: Track) => {
-        track.detach();
+        const elements = track.detach();
+        elements.forEach((element) => {
+          element.remove();
+        });
       });
 
       // 说话状态变化（用于检测 Agent 是否在说话）
@@ -404,7 +473,8 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
       );
 
       // 接收 LiveKit Agents 转录事件
-      // 这是 Agent 端 STT 产生的实时转录
+      // 这是 Agent 端 STT 产生的实时转录，用于显示正在说话的文字
+      // 注意：用户消息的 final 状态由后端 ConversationItemAdded 决定，不是 STT final
       room.on(
         RoomEvent.TranscriptionReceived,
         (segments: TranscriptionSegment[], participant?: Participant) => {
@@ -431,18 +501,64 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
               const lastIndex = prev.transcript.length - 1;
               const lastMsg =
                 lastIndex >= 0 ? prev.transcript[lastIndex] : null;
+              const existingIndex = prev.transcript.findIndex(
+                (item) => item.id === segment.id,
+              );
 
               // 只有当最后一条消息是同角色的非 final 消息时才更新它
-              // 这确保了：1) 新消息总在末尾 2) 不会插入到历史消息中间
               const canUpdateLast =
                 lastMsg && lastMsg.role === role && !lastMsg.isFinal;
-              const shouldMergeWithLastFinal =
-                role === "user" && shouldMergeUserFinal(lastMsg, now);
 
+              // 对于用户消息：强制按角色合并实时转录到同一个气泡
+              // 忽略 segment.id，始终更新最后一条非 final 的用户消息
+              // 真正的 final 状态由后端 ConversationItemAdded 事件决定
+              if (role === "user") {
+                // 查找最后一条非 final 的用户消息
+                const lastUserNonFinalIndex = prev.transcript.findLastIndex(
+                  (t) => t.role === "user" && !t.isFinal,
+                );
+
+                if (lastUserNonFinalIndex >= 0) {
+                  // 更新现有的非 final 用户消息，而不是创建新气泡
+                  const updated = [...prev.transcript];
+                  updated[lastUserNonFinalIndex] = {
+                    ...updated[lastUserNonFinalIndex],
+                    text: segment.text,
+                    timestamp: now,
+                    isFinal: false, // 保持非 final
+                  };
+                  return { ...prev, transcript: updated };
+                }
+
+                return {
+                  ...prev,
+                  transcript: [
+                    ...prev.transcript,
+                    {
+                      id: `user-interim-${now}`,
+                      role: "user",
+                      text: segment.text,
+                      timestamp: now,
+                      isFinal: false,
+                    },
+                  ],
+                };
+              }
+
+              // Agent 消息正常处理
               if (!segment.final) {
-                // 这是 interim 消息
+                if (existingIndex >= 0) {
+                  const updated = [...prev.transcript];
+                  updated[existingIndex] = {
+                    ...updated[existingIndex],
+                    text: segment.text,
+                    timestamp: now,
+                    isFinal: false,
+                  };
+                  return { ...prev, transcript: updated };
+                }
+
                 if (canUpdateLast) {
-                  // 更新最后一条消息的文本
                   const updated = [...prev.transcript];
                   updated[lastIndex] = {
                     ...lastMsg,
@@ -452,7 +568,6 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
                   return { ...prev, transcript: updated };
                 }
 
-                // 追加新的 interim 消息到末尾
                 return {
                   ...prev,
                   transcript: [
@@ -467,9 +582,19 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
                   ],
                 };
               } else {
-                // 这是 final 消息
+                // Agent 的 final 消息
+                if (existingIndex >= 0) {
+                  const updated = [...prev.transcript];
+                  updated[existingIndex] = {
+                    ...updated[existingIndex],
+                    text: segment.text,
+                    timestamp: now,
+                    isFinal: true,
+                  };
+                  return { ...prev, transcript: updated };
+                }
+
                 if (canUpdateLast) {
-                  // 将最后一条 interim 消息标记为 final
                   const updated = [...prev.transcript];
                   updated[lastIndex] = {
                     ...lastMsg,
@@ -480,17 +605,6 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
                   return { ...prev, transcript: updated };
                 }
 
-                if (shouldMergeWithLastFinal && lastMsg) {
-                  const updated = [...prev.transcript];
-                  updated[lastIndex] = {
-                    ...lastMsg,
-                    text: mergeTranscriptText(lastMsg.text, segment.text),
-                    timestamp: now,
-                  };
-                  return { ...prev, transcript: updated };
-                }
-
-                // 追加新的 final 消息到末尾
                 return {
                   ...prev,
                   transcript: [
@@ -511,8 +625,7 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
       );
 
       // 接收数据消息（用于自定义消息，如 RPC 响应）
-      // 注意：转录消息已通过 TranscriptionReceived 事件处理
-      // 此处不再处理 type: "transcript" 以避免重复
+      // 处理后端 ConversationItemAdded 发送的用户最终消息
       room.on(
         RoomEvent.DataReceived,
         (
@@ -524,12 +637,47 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
             const decoder = new TextDecoder();
             const message = JSON.parse(decoder.decode(payload));
 
-            // 跳过 transcript 类型消息，因为 TranscriptionReceived 事件已经处理了
-            // Agent 端通过 UserInputTranscribed 事件发送的 transcript 消息会导致重复
-            if (message.type === "transcript") {
-              console.log(
-                "[useLiveKitRoom] Skipping duplicate transcript message (handled by TranscriptionReceived)",
-              );
+            // 处理后端 ConversationItemAdded 发送的用户最终消息
+            // 这是轮次结束后的完整用户消息，不是实时转录
+            if (message.type === "transcript" && message.role === "user") {
+              setState((prev) => {
+                // 检查是否与最后一条用户消息重复
+                const lastUserMsg = [...prev.transcript]
+                  .reverse()
+                  .find((t) => t.role === "user");
+                if (lastUserMsg && lastUserMsg.text === message.text) {
+                  return prev; // 跳过重复
+                }
+
+                // 查找并替换最后的非 final 用户消息（实时转录状态）
+                const lastNonFinalIndex = prev.transcript.findLastIndex(
+                  (t) => t.role === "user" && !t.isFinal,
+                );
+                if (lastNonFinalIndex >= 0) {
+                  const updated = [...prev.transcript];
+                  updated[lastNonFinalIndex] = {
+                    ...updated[lastNonFinalIndex],
+                    text: message.text,
+                    isFinal: true,
+                  };
+                  return { ...prev, transcript: updated };
+                }
+
+                // 追加新消息
+                return {
+                  ...prev,
+                  transcript: [
+                    ...prev.transcript,
+                    {
+                      id: `user-final-${Date.now()}`,
+                      role: "user" as const,
+                      text: message.text,
+                      timestamp: Date.now(),
+                      isFinal: true,
+                    },
+                  ],
+                };
+              });
               return;
             }
 
@@ -581,6 +729,7 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
 
       // 断开连接
       room.on(RoomEvent.Disconnected, () => {
+        primaryAgentRef.current = null;
         setState((prev) => ({
           ...prev,
           connectionState: ConnectionState.Disconnected,
