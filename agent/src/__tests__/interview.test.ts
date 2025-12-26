@@ -30,9 +30,35 @@ vi.mock("@livekit/agents", () => {
     }
   }
 
+  class TTS {
+    constructor() {}
+  }
+
+  class ChunkedStream {
+    constructor() {}
+  }
+
   return {
     voice: { Agent },
-    llm: { ChatContext },
+    llm: {
+      ChatContext,
+      tool: vi.fn((opts) => opts),
+    },
+    tts: { TTS, ChunkedStream },
+  };
+});
+
+// Mock summarizer to avoid side-effects from providers.ts (missing env vars)
+vi.mock("../runtime/fsm/summarizer", () => {
+  return {
+    summarizeStage: vi.fn(async () => "MOCKED_SUMMARY"),
+  };
+});
+
+// Mock prompt builder to valid the check in updates agent test
+vi.mock("../runtime/fsm/prompt-builder", () => {
+  return {
+    buildStagePrompt: vi.fn(() => "PROMPT_FROM_BUILD"),
   };
 });
 
@@ -44,6 +70,7 @@ describe("runtime/interview.createInterviewApplier", () => {
   });
 
   it("updates agent and generates a natural kickoff that includes candidate name", async () => {
+    vi.useFakeTimers();
     const session = {
       updateAgent: vi.fn((agent: any) => {
         agent._ready = true;
@@ -57,6 +84,7 @@ describe("runtime/interview.createInterviewApplier", () => {
     });
 
     await apply({ type: "frontend:beginner", duration: 10 });
+    await vi.advanceTimersByTimeAsync(1000);
 
     expect(session.updateAgent).toHaveBeenCalledTimes(1);
     const agentInstance = (session.updateAgent.mock.calls[0] as any)[0];
@@ -93,7 +121,9 @@ describe("runtime/interview.createInterviewApplier", () => {
     const p1 = apply({ type: "frontend:beginner" });
     const p2 = apply({ type: "frontend:intermediate" });
 
-    await vi.runAllTimersAsync();
+    // Advance time just enough to trigger the internal timeouts (500ms)
+    // but NOT enough to trigger stage transitions (which default to 30 mins)
+    await vi.advanceTimersByTimeAsync(2000);
     await Promise.all([p1, p2]);
 
     expect(session.updateAgent).toHaveBeenCalledTimes(2);
