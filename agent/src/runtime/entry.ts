@@ -15,7 +15,10 @@ import {
   buildSystemPrompt,
 } from "../services/context-loader";
 import { BASE_SYSTEM_PROMPT } from "../constants/prompts";
-import { TECH_VOCABULARY } from "../constants/vocabulary";
+import {
+  TECH_VOCABULARY,
+  CHINESE_CONTEXT_VOCABULARY,
+} from "../constants/vocabulary";
 import type { InterviewContext } from "./types";
 import { publishDataToRoom } from "./livekit";
 import { getCandidateName } from "./profile";
@@ -31,6 +34,7 @@ import {
   saveUserMessage,
   saveAiMessage,
 } from "../services/message-persistence";
+import { extractKeywordsFromProfile } from "../services/keyword-extractor";
 
 /**
  * Kick all existing agents from a room before connecting.
@@ -122,9 +126,27 @@ export async function runAgentSession(
     console.warn("[Agent Session] Failed to parse participant metadata", e);
   }
 
+  // 从用户资料中提取关键词（姓名、学校、公司等专有名词）
+  const profileKeywords = extractKeywordsFromProfile(userProfile as any);
+
+  // 合并词汇表：通用技术词汇 + 中文专用词汇（如果是中文） + 用户特定关键词
+  const combinedVocabulary = [
+    ...TECH_VOCABULARY,
+    ...(locale === "zh" ? CHINESE_CONTEXT_VOCABULARY : []),
+    ...profileKeywords,
+  ];
+
+  console.log(
+    `[STT Init] Using ${combinedVocabulary.length} keywords for locale: ${locale}`,
+  );
+  console.log(
+    `[STT Init] Profile-specific keywords (${profileKeywords.length}):`,
+    profileKeywords,
+  );
+
   // 定义Agent如何处理音频输入和输出
   const session = new voice.AgentSession({
-    stt: createDeepgramSTT(TECH_VOCABULARY, locale),
+    stt: createDeepgramSTT(combinedVocabulary, locale),
     llm: createMiniMaxLLM(),
     tts: createMiniMaxTTS(locale),
     vad: vad,
@@ -193,6 +215,7 @@ export async function runAgentSession(
         return;
       }
       // 用户轮次结束，发送完整的用户消息
+      console.log(`[User Transcript] ${text}`);
       publishDataToRoom(room, {
         type: "transcript",
         role: "user",

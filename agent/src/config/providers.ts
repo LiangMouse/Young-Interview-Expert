@@ -83,7 +83,9 @@ export function createDeepgramSTT(keyterm: string[], language?: string) {
   // Deepgram 对非英文场景的 keyword boost 支持有限，且 SDK 会对 keywords 进行双重编码导致 400，
   // 因此仅保留 keyterm 作为提示词，keywords 置空。
   const keywords: [string, number][] = [];
-  const resolvedKeyterms = isEnglish ? cleanedKeyterms : [];
+
+  // 实验性：尝试为中文场景也启用 keyterm，测试是否能提升准确率
+  const resolvedKeyterms = cleanedKeyterms;
 
   const sttInstance = new deepgram.STT({
     apiKey: getDeepgramApiKey(),

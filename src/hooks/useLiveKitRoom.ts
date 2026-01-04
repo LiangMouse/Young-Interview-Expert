@@ -66,6 +66,26 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
   // Track the first connected agent to filter duplicates (hot-reload issue)
   const primaryAgentRef = useRef<string | null>(null);
 
+  /**
+   * Segment Map for User Transcription
+   *
+   * LiveKit 转写机制说明:
+   * - 每个语音片段(segment)有唯一的 segment.id
+   * - 同一个 segment 会多次发送: interim (非 final) → final
+   * - 不同的 segment 应该累积拼接,而不是覆盖
+   *
+   * 此 map 存储: segmentId -> TranscriptionSegment 对象
+   * 在收到最终消息时清空
+   */
+  const userSegmentMapRef = useRef<Map<string, TranscriptionSegment>>(
+    new Map(),
+  );
+  // 保留用于将来可能的 Agent 转写优化
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const agentSegmentMapRef = useRef<Map<string, TranscriptionSegment>>(
+    new Map(),
+  );
+
   const [state, setState] = useState<LiveKitRoomState>({
     connectionState: ConnectionState.Disconnected,
     isConnected: false,
@@ -509,40 +529,123 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
               const canUpdateLast =
                 lastMsg && lastMsg.role === role && !lastMsg.isFinal;
 
-              // 对于用户消息：强制按角色合并实时转录到同一个气泡
-              // 忽略 segment.id，始终更新最后一条非 final 的用户消息
-              // 真正的 final 状态由后端 ConversationItemAdded 事件决定
+              /**
+               * 用户消息处理:累积拼接分片 + 智能优化
+               */
               if (role === "user") {
-                // 查找最后一条非 final 的用户消息
+                // 1. 判断是否开启新的一轮对话（通过检查 UI 上是否有 active user bubble）
                 const lastUserNonFinalIndex = prev.transcript.findLastIndex(
                   (t) => t.role === "user" && !t.isFinal,
                 );
 
+                // 如果没有 active bubble，说明这是新的一轮，必须先清理旧的 Map 数据
+                if (lastUserNonFinalIndex === -1) {
+                  userSegmentMapRef.current.clear();
+                }
+
+                // 2. 更新 segment map
+                userSegmentMapRef.current.set(segment.id, segment);
+
+                // 3. 提取所有 segments 并进行排序 (按 startTime)
+                // 如果没有 startTime，则默认保持插入顺序(Map iterator order)
+                const sortedSegments = Array.from(
+                  userSegmentMapRef.current.values(),
+                ).sort((a, b) => {
+                  if (a.startTime && b.startTime) {
+                    return a.startTime - b.startTime;
+                  }
+                  return 0;
+                });
+
+                // 4. 智能拼接文本
+                let combinedText = "";
+                let processedSegments: TranscriptionSegment[] = [];
+
+                for (const seg of sortedSegments) {
+                  const text = seg.text.trim();
+                  if (!text) continue;
+
+                  // 4.1 去重检测：如果当前文本以“上一个文本”为前缀（e.g. "hello" -> "hello world"），则覆盖
+                  // 由于是已排序的分片，如果通过 id 区分，我们需要判断文本内容的包含关系
+                  // 这里简化策略：检查 processedSegments 最后一个的内容
+                  if (processedSegments.length > 0) {
+                    const lastSeg =
+                      processedSegments[processedSegments.length - 1];
+                    const lastText = lastSeg.text.trim();
+
+                    // 如果当前文本完全包含了上一个文本（且长度更长），则认为是对上一个分片的扩充更新
+                    // 注意：这通常发生在同一个 segmentId 更新时，但有时不同 segmentId 也可能有重叠
+                    // 如果 segmentId 相同，Map 已经处理了覆盖。这里处理不同 Id 的语义重叠。
+                    if (
+                      text.length > lastText.length &&
+                      text.startsWith(lastText)
+                    ) {
+                      // 替换最后一个
+                      processedSegments[processedSegments.length - 1] = seg;
+                      continue;
+                    }
+                  }
+
+                  processedSegments.push(seg);
+                }
+
+                // 4.2 最终拼接（处理空格）
+                const isCJK = (str: string) =>
+                  /[\u4e00-\u9fa5\u3040-\u30ff\u31f0-\u31ff]/.test(str);
+
+                processedSegments.forEach((seg, index) => {
+                  const currText = seg.text.trim();
+                  if (index === 0) {
+                    combinedText = currText;
+                  } else {
+                    const prevText = processedSegments[index - 1].text.trim();
+                    const prevLastChar = prevText.slice(-1);
+                    const currFirstChar = currText.slice(0, 1);
+
+                    // 智能空格策略：
+                    // 如果 两个字符 都是 CJK -> 不加空格
+                    // 否则 -> 加空格 (English-English, CJK-English, English-CJK)
+                    // 用户反馈中文里多余空格，所以只针对 CJK-CJK 去除空格
+                    if (isCJK(prevLastChar) && isCJK(currFirstChar)) {
+                      combinedText += currText;
+                    } else {
+                      combinedText += " " + currText;
+                    }
+                  }
+                });
+
+                // 5. 更新 UI
                 if (lastUserNonFinalIndex >= 0) {
-                  // 更新现有的非 final 用户消息，而不是创建新气泡
+                  // 更新现有的非 final 用户消息
                   const updated = [...prev.transcript];
                   updated[lastUserNonFinalIndex] = {
                     ...updated[lastUserNonFinalIndex],
-                    text: segment.text,
+                    text: combinedText,
                     timestamp: now,
-                    isFinal: false, // 保持非 final
+                    isFinal: false,
                   };
                   return { ...prev, transcript: updated };
                 }
 
-                return {
-                  ...prev,
-                  transcript: [
-                    ...prev.transcript,
-                    {
-                      id: `user-interim-${now}`,
-                      role: "user",
-                      text: segment.text,
-                      timestamp: now,
-                      isFinal: false,
-                    },
-                  ],
-                };
+                // 创建新的非 final 用户消息气泡
+                // 只有当有内容时才创建
+                if (combinedText.length > 0) {
+                  return {
+                    ...prev,
+                    transcript: [
+                      ...prev.transcript,
+                      {
+                        id: `user-interim-${now}`,
+                        role: "user",
+                        text: combinedText,
+                        timestamp: now,
+                        isFinal: false,
+                      },
+                    ],
+                  };
+                }
+
+                return prev;
               }
 
               // Agent 消息正常处理
@@ -640,6 +743,9 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
             // 处理后端 ConversationItemAdded 发送的用户最终消息
             // 这是轮次结束后的完整用户消息，不是实时转录
             if (message.type === "transcript" && message.role === "user") {
+              // ✅ 清空 segment map,准备下一轮对话
+              userSegmentMapRef.current.clear();
+
               setState((prev) => {
                 // 检查是否与最后一条用户消息重复
                 const lastUserMsg = [...prev.transcript]
@@ -657,7 +763,7 @@ export function useLiveKitRoom(options: UseLiveKitRoomOptions) {
                   const updated = [...prev.transcript];
                   updated[lastNonFinalIndex] = {
                     ...updated[lastNonFinalIndex],
-                    text: message.text,
+                    text: message.text, // 使用后端提供的最终文本
                     isFinal: true,
                   };
                   return { ...prev, transcript: updated };

@@ -3,23 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-const defaultCode = `function reverseList(head) {
-  let prev = null;
-  let current = head;
-  
-  while (current !== null) {
-    let next = current.next;
-    current.next = prev;
-    prev = current;
-    current = next;
-  }
-  
-  return prev;
-}
-
-// Test case
-const list = { val: 1, next: { val: 2, next: { val: 3, next: null } } };
-console.log(reverseList(list));`;
+const defaultCode = ``;
 
 const tabs = [
   { id: "solution", label: "solution.js" },
