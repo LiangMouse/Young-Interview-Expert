@@ -49,20 +49,20 @@ vi.mock("@livekit/agents", () => {
 });
 
 // Mock summarizer to avoid side-effects from providers.ts (missing env vars)
-vi.mock("../runtime/fsm/summarizer", () => {
+vi.mock("./fsm/summarizer", () => {
   return {
     summarizeStage: vi.fn(async () => "MOCKED_SUMMARY"),
   };
 });
 
 // Mock prompt builder to valid the check in updates agent test
-vi.mock("../runtime/fsm/prompt-builder", () => {
+vi.mock("./fsm/prompt-builder", () => {
   return {
     buildStagePrompt: vi.fn(() => "PROMPT_FROM_BUILD"),
   };
 });
 
-import { createInterviewApplier } from "../runtime/interview";
+import { createInterviewApplier } from "./interview";
 
 describe("runtime/interview.createInterviewApplier", () => {
   beforeEach(() => {

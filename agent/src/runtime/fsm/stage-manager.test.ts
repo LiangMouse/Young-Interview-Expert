@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { StageManager } from "../runtime/fsm/stage-manager";
-import { InterviewStage } from "../runtime/fsm/types";
+import { StageManager } from "./stage-manager";
+import { InterviewStage } from "./types";
 
 describe("StageManager", () => {
   let stageManager: StageManager;

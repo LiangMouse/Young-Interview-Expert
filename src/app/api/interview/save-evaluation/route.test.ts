@@ -48,7 +48,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: mockCreateClient,
 }));
 
-import { POST } from "../route";
+import { POST } from "./route";
 
 describe("Save Evaluation API", () => {
   beforeEach(() => {

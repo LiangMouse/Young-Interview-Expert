@@ -8,10 +8,7 @@ vi.mock("@livekit/rtc-node", () => {
   };
 });
 
-import {
-  publishDataToRoom,
-  waitForNonAgentParticipant,
-} from "../runtime/livekit";
+import { publishDataToRoom, waitForNonAgentParticipant } from "./livekit";
 
 describe("runtime/livekit.publishDataToRoom", () => {
   it("publishes JSON payload to lk-chat-topic", () => {

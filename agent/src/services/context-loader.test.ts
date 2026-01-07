@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSystemPrompt } from "../../services/context-loader";
+import { buildSystemPrompt } from "./context-loader";
 
 describe("buildSystemPrompt", () => {
   it("should wrap candidate/interview context with readonly tags", () => {

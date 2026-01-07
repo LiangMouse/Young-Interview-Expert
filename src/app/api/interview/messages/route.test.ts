@@ -20,7 +20,7 @@ vi.mock("@supabase/supabase-js", () => ({
   createClient: () => mockSupabase,
 }));
 
-import { GET, POST } from "../route";
+import { GET, POST } from "./route";
 
 describe("Messages API", () => {
   beforeEach(() => {

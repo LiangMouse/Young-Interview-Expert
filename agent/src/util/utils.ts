@@ -1,6 +1,3 @@
-// 简单的 polyfill 或直接使用 Node.js 的 fetch (Node 18+)
-// 项目使用 tsx (Node 20+)，全局已有 fetch
-
 export const DIRECTOR_BASE_URL =
   process.env.DIRECTOR_BASE_URL || "http://localhost:3000";
 
@@ -17,7 +14,6 @@ export async function fetchConversationHistory(
     const response = await fetch(url);
     console.log(response);
     if (!response.ok) {
-      // Log full URL for debugging
       console.warn(
         `[对话历史] 获取失败: ${response.status} ${response.statusText} URL: ${url}`,
       );

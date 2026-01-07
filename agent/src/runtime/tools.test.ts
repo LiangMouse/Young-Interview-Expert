@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createTools } from "../runtime/tools";
+import { createTools } from "./tools";
 
 describe("Tool Functions", () => {
   const mockProfile = {

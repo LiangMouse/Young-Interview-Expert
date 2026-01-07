@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createUserTextResponder } from "../runtime/responders";
+import { createUserTextResponder } from "./responders";
 
 describe("runtime/responders.createUserTextResponder", () => {
   it("ignores blank input", async () => {

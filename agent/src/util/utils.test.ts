@@ -3,7 +3,7 @@ import {
   fetchConversationHistory,
   saveMessage,
   DIRECTOR_BASE_URL,
-} from "../utils";
+} from "./utils";
 
 describe("Utils", () => {
   const originalFetch = global.fetch;

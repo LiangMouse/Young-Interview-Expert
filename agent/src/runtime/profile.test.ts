@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getCandidateName } from "../runtime/profile";
+import { getCandidateName } from "./profile";
 
 describe("runtime/profile.getCandidateName", () => {
   it("returns trimmed nickname when present", () => {
