@@ -11,8 +11,10 @@ import { summarizeStage } from "./fsm/summarizer";
 export function createInterviewApplier(args: {
   session: voice.AgentSession;
   userProfile: unknown;
+  hasGreeted?: () => boolean;
+  setGreeted?: () => void;
 }) {
-  const { session, userProfile } = args;
+  const { session, userProfile, hasGreeted, setGreeted } = args;
 
   let applying: Promise<void> | null = null;
   let queued: InterviewContext | null = null;
@@ -156,19 +158,27 @@ export function createInterviewApplier(args: {
 
     // 构造并发送开场白
     if (historyMessages.length === 0) {
-      const candidateName = getCandidateName(userProfile);
-      const greeting = candidateName
-        ? `您好${candidateName},我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧`
-        : "您好,我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧";
+      // 检查是否已经在 entry.ts 的超时兜底逻辑中发送过开场白
+      if (hasGreeted && hasGreeted()) {
+        console.log("[Interview] 检测到已发送过开场白，跳过重复发送。");
+      } else {
+        // 标记已发送开场白
+        if (setGreeted) setGreeted();
 
-      // 稍作延迟以确保 Agent 就绪
-      setTimeout(() => {
-        session.generateReply({
-          userInput: "系统：面试开场",
-          instructions: `只输出这句固定开场白，不要添加或修改任何内容：${greeting}`,
-          allowInterruptions: true,
-        });
-      }, 500);
+        const candidateName = getCandidateName(userProfile);
+        const greeting = candidateName
+          ? `您好${candidateName},我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧`
+          : "您好,我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧";
+
+        // 稍作延迟以确保 Agent 就绪
+        setTimeout(() => {
+          session.generateReply({
+            userInput: "系统：面试开场",
+            instructions: `只输出这句固定开场白，不要添加或修改任何内容：${greeting}`,
+            allowInterruptions: true,
+          });
+        }, 500);
+      }
     } else {
       console.log("[Interview] 检测到已有历史记录，跳过开场白。");
     }

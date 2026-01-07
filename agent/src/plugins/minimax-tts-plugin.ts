@@ -3,11 +3,8 @@ import type { AudioFrame } from "@livekit/rtc-node";
 
 export interface MiniMaxTTSOptions {
   apiKey: string;
-  /** MiniMax voice id, e.g. "male-qn-qingse" */
   voiceId?: string;
-  /** MiniMax TTS model, default: "speech-01-turbo" */
   model?: string;
-  /** PCM sample rate, default: 32000 */
   sampleRate?: number;
 }
 
@@ -98,7 +95,10 @@ class MiniMaxChunkedStream extends tts.ChunkedStream {
     });
 
     if (!response.ok) {
-      throw new Error(`[MiniMax TTS] HTTP ${response.status}`);
+      const errorBody = await response.text().catch(() => "(无法读取响应体)");
+      throw new Error(
+        `[MiniMax TTS] HTTP ${response.status}: ${errorBody.slice(0, 500)}`,
+      );
     }
 
     if (!response.body) {
@@ -131,6 +131,7 @@ class MiniMaxChunkedStream extends tts.ChunkedStream {
     const textDecoder = new TextDecoder();
     let pendingText = "";
     let endedByStatus = false;
+    let multiLineDataBuffer = ""; // 用于合并多行 data: 的缓冲区
 
     const handleAudioBytes = (pcmBytes: ArrayBuffer) => {
       const frames = audioByteStream.write(pcmBytes);
@@ -143,41 +144,56 @@ class MiniMaxChunkedStream extends tts.ChunkedStream {
 
     const handleEventDataLine = (line: string) => {
       const trimmed = line.trim();
-      if (!trimmed.startsWith("data:")) return;
-      const jsonText = trimmed.slice("data:".length).trim();
-      if (!jsonText) return;
 
-      let payload: unknown;
-      try {
-        payload = JSON.parse(jsonText);
-      } catch {
-        return;
+      // SSE 规范：支持多行 data: 合并
+      if (trimmed.startsWith("data:")) {
+        const content = trimmed.slice("data:".length).trim();
+        multiLineDataBuffer += content;
+        return; // 继续累积，直到遇到空行
       }
 
-      const isRecord = (v: unknown): v is Record<string, unknown> =>
-        typeof v === "object" && v !== null;
+      // 空行表示事件结束，处理累积的 JSON
+      if (trimmed === "" && multiLineDataBuffer) {
+        const jsonText = multiLineDataBuffer;
+        multiLineDataBuffer = ""; // 重置缓冲区
 
-      if (!isRecord(payload)) return;
+        if (!jsonText) return;
 
-      // MiniMax SSE 的结构是：
-      // { data: { audio: "<hex>", status: 1|2, ... }, trace_id: "...", base_resp: ... }
-      // 兼容未来可能的扁平结构：{ audio, status }
-      const inner = isRecord(payload.data) ? payload.data : payload;
-      const status = inner.status;
-      const audio = inner.audio;
+        let payload: unknown;
+        try {
+          payload = JSON.parse(jsonText);
+        } catch (e) {
+          console.warn("[MiniMax TTS] JSON 解析失败:", jsonText.slice(0, 100));
+          return;
+        }
 
-      if (status === 2) {
-        endedByStatus = true;
-        return;
-      }
+        const isRecord = (v: unknown): v is Record<string, unknown> =>
+          typeof v === "object" && v !== null;
 
-      if (typeof audio === "string" && audio.length > 0) {
-        // audio 为 hex 编码的 PCM bytes
-        const buf = Buffer.from(audio, "hex");
-        if (buf.byteLength > 0) {
-          handleAudioBytes(
-            buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
-          );
+        if (!isRecord(payload)) return;
+
+        // MiniMax SSE 的结构是：
+        // { data: { audio: "<hex>", status: 1|2, ... }, trace_id: "...", base_resp: ... }
+        const inner = isRecord(payload.data) ? payload.data : payload;
+        const status = inner.status;
+        const audio = inner.audio;
+
+        // 处理 status 为数字或字符串的情况
+        const statusNum =
+          typeof status === "string" ? parseInt(status, 10) : status;
+        if (statusNum === 2) {
+          endedByStatus = true;
+          return;
+        }
+
+        if (typeof audio === "string" && audio.length > 0) {
+          // audio 为 hex 编码的 PCM bytes
+          const buf = Buffer.from(audio, "hex");
+          if (buf.byteLength > 0) {
+            handleAudioBytes(
+              buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
+            );
+          }
         }
       }
     };
@@ -199,6 +215,18 @@ class MiniMaxChunkedStream extends tts.ChunkedStream {
       }
 
       if (endedByStatus) break;
+    }
+
+    // 【高优先级修复】处理残留的 pendingText（EOF 时未发送 status=2 的情况）
+    if (pendingText.trim()) {
+      const lines = pendingText.split(/\r?\n/);
+      for (const line of lines) {
+        handleEventDataLine(line);
+      }
+      // 处理最后可能未闭合的多行 data:
+      if (multiLineDataBuffer) {
+        handleEventDataLine(""); // 触发空行处理逻辑
+      }
     }
 
     // 输出剩余缓存

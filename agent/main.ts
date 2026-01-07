@@ -15,11 +15,11 @@ process.on("uncaughtException", (error) => {
 
 // Load environment variables
 dotenv.config({ path: ".env.local" });
+dotenv.config();
 
 // LiveKit Agents logger must be initialized before using plugins
 initAgentsLogger();
 
-// ====== Agent definition (Worker will load this default export) ======
 export default defineAgent({
   // 语音活动监测的VAD模型加载预热
   prewarm: async (proc: JobProcess) => {

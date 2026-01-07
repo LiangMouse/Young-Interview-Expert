@@ -80,15 +80,18 @@ async function kickOldAgents(roomName: string): Promise<void> {
   }
 }
 
+/**
+ * Agent 运行入口
+ * @param ctx
+ */
 export async function agentEntry(ctx: JobContext) {
-  // Get room name from job info (more reliable than ctx.room.name before connect)
+  // 关闭先前的会话房间
   const roomName = ctx.job?.room?.name || ctx.room.name;
 
-  // Kick old agents before connecting (hot-reload cleanup)
   if (roomName) await kickOldAgents(roomName);
-
+  // Agent连入房间
   await ctx.connect();
-
+  // 等待第一个用户连入房间
   const participant = await ctx.waitForParticipant();
   const vad = ctx.proc.userData.vad as silero.VAD;
 
@@ -136,9 +139,6 @@ export async function runAgentSession(
     ...profileKeywords,
   ];
 
-  console.log(
-    `[STT Init] Using ${combinedVocabulary.length} keywords for locale: ${locale}`,
-  );
   console.log(
     `[STT Init] Profile-specific keywords (${profileKeywords.length}):`,
     profileKeywords,
@@ -250,12 +250,20 @@ export async function runAgentSession(
   let startInterviewHandled = false;
   let latestInterview: InterviewContext | null = null;
   let applyInterviewScheduled = false;
+  let hasGreeted = false; // 防止双重开场白的状态锁
   let resolveStartInterview: ((v: InterviewContext) => void) | null = null;
   const startInterviewPromise = new Promise<InterviewContext>((resolve) => {
     resolveStartInterview = resolve;
   });
 
-  const applyInterview = createInterviewApplier({ session, userProfile });
+  const applyInterview = createInterviewApplier({
+    session,
+    userProfile,
+    hasGreeted: () => hasGreeted,
+    setGreeted: () => {
+      hasGreeted = true;
+    },
+  });
   const respondToUserText = createUserTextResponder({ session });
 
   const scheduleApplyLatestInterview = () => {
@@ -340,15 +348,19 @@ export async function runAgentSession(
       latestInterview = interviewOrNull;
       scheduleApplyLatestInterview();
     } else {
-      const candidateName = getCandidateName(userProfile);
-      const greeting = candidateName
-        ? `您好${candidateName},我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧`
-        : "您好,我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧";
-      await session.generateReply({
-        userInput: "系统：面试开场",
-        instructions: `只输出这句固定开场白，不要添加或修改任何内容：${greeting}`,
-        allowInterruptions: true,
-      });
+      // 超时兜底：发送通用开场白
+      if (!hasGreeted) {
+        hasGreeted = true;
+        const candidateName = getCandidateName(userProfile);
+        const greeting = candidateName
+          ? `您好${candidateName},我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧`
+          : "您好,我是今天的面试官,如果你已经准备好,就请做个简单的自我介绍吧";
+        await session.generateReply({
+          userInput: "系统：面试开场",
+          instructions: `只输出这句固定开场白，不要添加或修改任何内容：${greeting}`,
+          allowInterruptions: true,
+        });
+      }
     }
   }
 }

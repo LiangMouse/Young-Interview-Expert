@@ -9,20 +9,17 @@
 import * as dotenv from "dotenv";
 import { initAgentsLogger } from "./src/bootstrap/logger";
 import { runWorkerMode } from "./src/modes/worker";
-// 导入 Turn Detector 插件，确保 download-files 命令能下载其模型
-import * as livekit from "@livekit/agents-plugin-livekit";
 
 // Load environment variables for CLI mode
 dotenv.config({ path: ".env.local" });
+dotenv.config();
 
 // LiveKit Agents logger must be initialized before using plugins
 initAgentsLogger();
 
-// ====== Start mode ======
 const isFixedRoomMode = process.env.FIXED_ROOM_MODE === "true";
 const devRoomName = process.env.DEV_ROOM_NAME;
 
-// Handle graceful shutdown for hot-reloads
 const shutdown = () => {
   console.log("\n[Agent] Process exiting...");
   process.exit(0);

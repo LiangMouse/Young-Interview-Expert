@@ -13,7 +13,7 @@ const typeLabels: Record<string, string> = {
   frontend: "前端开发",
   backend: "后端开发",
   fullstack: "全栈开发",
-  mobile: "移动端开发",
+  mobile: "客户端开发",
 };
 
 export function RecentActivity() {
@@ -62,7 +62,7 @@ export function RecentActivity() {
     );
   }
 
-  // 空状态
+  // 当前面试记录为空
   if (activities.length === 0) {
     return (
       <div className="rounded-lg border border-[#E5E5E5] bg-white shadow-sm">
